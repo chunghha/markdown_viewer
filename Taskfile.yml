@@ -1,0 +1,129 @@
+version: "3"
+
+vars:
+  CARGO_TARGET_DIR: "{{.USER_WORKING_DIR}}/target"
+
+tasks:
+  default:
+    desc: Show available tasks
+    cmds:
+      - task --list
+
+  fmt:
+    desc: Format code with rustfmt
+    cmds:
+      - cargo fmt
+
+  fmt-check:
+    desc: Check if code is formatted (CI-friendly)
+    cmds:
+      - cargo fmt -- --check
+
+  lint:
+    desc: Run clippy linter
+    cmds:
+      - cargo clippy -- -D warnings
+
+  test:
+    desc: Run all tests
+    cmds:
+      - cargo test
+
+  test-verbose:
+    desc: Run tests with verbose output
+    cmds:
+      - cargo test -- --nocapture
+
+  build:
+    desc: Build the project
+    deps: [fmt, lint]
+    cmds:
+      - cargo build
+
+  build-release:
+    desc: Build the project in release mode
+    deps: [fmt, lint]
+    cmds:
+      - cargo build --release
+
+  run:
+    desc: Run the markdown viewer
+    deps: [fmt, lint]
+    cmds:
+      - cargo run
+
+  run-release:
+    desc: Run the markdown viewer (release build)
+    deps: [fmt, lint]
+    cmds:
+      - cargo run --release
+
+  clean:
+    desc: Clean build artifacts
+    cmds:
+      - cargo clean
+
+  check:
+    desc: Quick compile check without building
+    cmds:
+      - cargo check
+
+  doc:
+    desc: Generate documentation
+    cmds:
+      - cargo doc --no-deps --open
+
+  update:
+    desc: Update dependencies
+    cmds:
+      - cargo update
+
+  outdated:
+    desc: Check for outdated dependencies (requires cargo-outdated)
+    cmds:
+      - cargo outdated
+
+  audit:
+    desc: Security audit (requires cargo-audit)
+    cmds:
+      - cargo audit
+
+  ci:
+    desc: Run full CI pipeline (format check, lint, test, build)
+    deps: [fmt-check, lint, test, build]
+
+  pre-commit:
+    desc: Run checks before committing (TDD workflow)
+    deps: [fmt, lint, test]
+
+  tdd:
+    desc: TDD cycle - run tests in watch mode (requires cargo-watch)
+    cmds:
+      - cargo watch -x test
+
+  dev:
+    desc: Development mode - rebuild and run on file changes (requires cargo-watch)
+    cmds:
+      - cargo watch -x run
+
+  install-tools:
+    desc: Install useful development tools
+    cmds:
+      - cargo install cargo-watch
+      - cargo install cargo-outdated
+      - cargo install cargo-audit
+
+  benchmark:
+    desc: Run benchmarks (when available)
+    cmds:
+      - cargo bench
+
+  coverage:
+    desc: Generate test coverage report (requires cargo-tarpaulin)
+    cmds:
+      - cargo tarpaulin --out html --output-dir coverage
+
+  install-coverage:
+    desc: Install test coverage tool
+    cmds:
+      - cargo install cargo-tarpaulin

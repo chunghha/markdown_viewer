@@ -1,0 +1,8 @@
+[package]
+name = "markdown_viewer"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+comrak = "0.43.0"
+gpui = "0.2.0"
