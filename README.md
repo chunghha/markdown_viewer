@@ -7,6 +7,7 @@ A desktop Markdown viewer built with Rust and GPUI, featuring advanced scrolling
 ### Core Functionality
 - **Markdown Rendering**: Full support for CommonMark-compliant Markdown using `comrak`
 - **Rich Text Display**: Styled headings, lists, code blocks, links, emphasis, and blockquotes
+- **CLI Interface**: Command-line argument support for loading any Markdown file
 - **Clean Interface**: Minimalist design focused on readability
 
 ### Advanced Scrolling
@@ -33,6 +34,7 @@ A desktop Markdown viewer built with Rust and GPUI, featuring advanced scrolling
 ### Core Components
 - **ScrollState**: Manages scroll position, bounds, and navigation logic
 - **MarkdownViewer**: Main application component with event handling
+- **File Handling**: CLI argument parsing and file loading with error handling
 - **Rendering Engine**: Efficient Markdown-to-UI transformation
 - **Style System**: Centralized styling with meaningful constants
 
@@ -54,10 +56,19 @@ cargo build --release
 ```bash
 # Run with default TODO.md file
 cargo run
+
+# Run with a specific Markdown file
+cargo run -- README.md
+cargo run -- path/to/your/file.md
+
+# Show help and usage information
+cargo run -- --help
+
 # OR with Task
 task run
+task run -- README.md
 
-# The application will load and display TODO.md with full scrolling support
+# The application will load and display the Markdown file with full scrolling support
 ```
 
 ### Development Workflow
@@ -116,6 +127,7 @@ cargo fmt
 ### Dependencies
 - **comrak**: CommonMark-compliant Markdown parsing
 - **gpui**: Modern Rust GUI framework for desktop applications
+- **clap**: Command-line argument parsing for file specification
 
 ### Performance
 - **Efficient Rendering**: Transform-based scrolling without content re-rendering
@@ -123,7 +135,7 @@ cargo fmt
 - **Responsive**: 60 FPS scrolling with large documents
 
 ### Code Quality
-- **9 Unit Tests**: Comprehensive test coverage for scrolling logic
+- **15 Unit Tests**: Comprehensive test coverage for scrolling and file handling logic
 - **Clippy Clean**: Passes all Rust linting checks
 - **Well Documented**: Inline documentation and implementation guides
 
@@ -150,10 +162,15 @@ markdown_viewer/
 - **Bounds Enforcement**: Eliminated scrolling beyond document boundaries
 - **Content Height**: Accurate estimation prevents content cutoff
 
+### New Features ✅
+- **CLI Arguments**: Accept file path as command-line argument with fallback to TODO.md
+- **File Validation**: Proper error handling for missing or invalid files
+- **Usage Help**: Built-in help system with `--help` flag
+
 ### Code Quality ✅
 - **Meaningful Constants**: Extracted magic numbers to named constants
 - **Enhanced Documentation**: Updated all project documentation
-- **Test Coverage**: Added bounds checking and constant validation tests
+- **Test Coverage**: Added bounds checking, file handling, and validation tests
 
 ## Development Philosophy
 
@@ -191,7 +208,8 @@ task pre-commit
 
 ## Future Enhancements
 
-- **File Loading**: Support for arbitrary Markdown files via CLI arguments
+- **Multiple File Formats**: Support for .markdown, .txt extensions
+- **File Watching**: Auto-reload when files change
 - **Syntax Highlighting**: Code block syntax highlighting
 - **Table Support**: Enhanced table rendering
 - **Image Display**: Inline image support

@@ -1,13 +1,23 @@
+use clap::Parser;
 use comrak::{parse_document, Arena, ComrakOptions};
 use gpui::{
     div, prelude::*, px, App, Application, Context, IntoElement, KeyDownEvent, Render,
     ScrollWheelEvent, Window, WindowOptions,
 };
 use markdown_viewer::{
-    render_markdown_ast, ScrollState, BASE_TEXT_SIZE, BG_COLOR, CONTENT_HEIGHT_BUFFER,
-    DEFAULT_VIEWPORT_HEIGHT, LINE_HEIGHT_MULTIPLIER, PRIMARY_FONT, TEXT_COLOR,
+    load_markdown_content, render_markdown_ast, resolve_markdown_file_path, ScrollState,
+    BASE_TEXT_SIZE, BG_COLOR, CONTENT_HEIGHT_BUFFER, DEFAULT_VIEWPORT_HEIGHT,
+    LINE_HEIGHT_MULTIPLIER, PRIMARY_FONT, TEXT_COLOR,
 };
-use std::fs;
+use std::process;
+
+#[derive(Parser)]
+#[command(name = "markdown_viewer")]
+#[command(about = "A simple markdown viewer with scrolling support")]
+struct Args {
+    /// Path to the markdown file to view
+    file: Option<String>,
+}
 
 struct MarkdownViewer {
     markdown_content: String,
@@ -92,9 +102,27 @@ impl Render for MarkdownViewer {
 }
 
 fn main() {
-    Application::new().run(|cx: &mut App| {
-        let markdown_input = fs::read_to_string("TODO.md").expect("Failed to read TODO.md file");
+    let args = Args::parse();
 
+    // Resolve the file path using our new function
+    let file_path = match resolve_markdown_file_path(args.file.as_deref()) {
+        Ok(path) => path,
+        Err(err) => {
+            eprintln!("Error: {}", err);
+            process::exit(1);
+        }
+    };
+
+    // Load the markdown content
+    let markdown_input = match load_markdown_content(&file_path) {
+        Ok(content) => content,
+        Err(err) => {
+            eprintln!("Error: {}", err);
+            process::exit(1);
+        }
+    };
+
+    Application::new().run(|cx: &mut App| {
         cx.open_window(WindowOptions::default(), |_, cx| {
             cx.new(|_| {
                 let mut viewer = MarkdownViewer {

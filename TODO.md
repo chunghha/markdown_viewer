@@ -15,8 +15,8 @@ The core scrolling functionality has been **fully implemented and tested**. All 
 ## Next Development Phases 🚀
 
 ### Phase 1: File Loading Enhancement (High Priority)
-- [ ] **Command Line Arguments**
-  - [ ] Accept file path as CLI argument
+- [x] **Command Line Arguments**
+  - [x] Accept file path as CLI argument
   - [ ] Support multiple file formats (.md, .markdown, .txt)
   - [ ] Add file validation and error handling
   - [ ] Default to README.md if no argument provided

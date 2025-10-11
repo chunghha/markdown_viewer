@@ -5,6 +5,7 @@
 
 use comrak::nodes::{AstNode, NodeValue};
 use gpui::{div, prelude::*, px, AnyElement, FontWeight, IntoElement, Rgba};
+use std::path::Path;
 
 // ---- Style Constants -------------------------------------------------------
 
@@ -377,6 +378,49 @@ pub fn render_markdown_ast<'a, T>(node: &'a AstNode<'a>, _cx: &mut Context<T>) -
     }
 }
 
+// ---- File Handling ---------------------------------------------------------
+
+/// Resolves the markdown file path based on CLI argument or default
+///
+/// # Arguments
+/// * `file_path` - Optional file path from CLI arguments
+///
+/// # Returns
+/// * `Ok(String)` - The resolved file path
+/// * `Err(String)` - Error message if file resolution fails
+pub fn resolve_markdown_file_path(file_path: Option<&str>) -> Result<String, String> {
+    match file_path {
+        Some(path) => {
+            if Path::new(path).exists() {
+                Ok(path.to_string())
+            } else {
+                Err(format!("File not found: {}", path))
+            }
+        }
+        None => {
+            let default_path = "TODO.md";
+            if Path::new(default_path).exists() {
+                Ok(default_path.to_string())
+            } else {
+                Err("Default file TODO.md not found. Please specify a markdown file.".to_string())
+            }
+        }
+    }
+}
+
+/// Loads markdown content from a file
+///
+/// # Arguments
+/// * `file_path` - Path to the markdown file
+///
+/// # Returns
+/// * `Ok(String)` - The file content
+/// * `Err(String)` - Error message if loading fails
+pub fn load_markdown_content(file_path: &str) -> Result<String, String> {
+    std::fs::read_to_string(file_path)
+        .map_err(|e| format!("Failed to read file '{}': {}", file_path, e))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -485,5 +529,72 @@ mod tests {
         // Verify default viewport height is reasonable
         assert!(DEFAULT_VIEWPORT_HEIGHT > 0.0);
         assert_eq!(DEFAULT_VIEWPORT_HEIGHT, 800.0);
+    }
+
+    #[test]
+    fn resolve_markdown_file_path_with_valid_file() {
+        // Create a temporary file for testing
+        let test_content = "# Test\nThis is a test file.";
+        std::fs::write("test_file.md", test_content).expect("Failed to create test file");
+
+        let result = crate::resolve_markdown_file_path(Some("test_file.md"));
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "test_file.md");
+
+        // Clean up
+        std::fs::remove_file("test_file.md").ok();
+    }
+
+    #[test]
+    fn resolve_markdown_file_path_with_nonexistent_file() {
+        let result = crate::resolve_markdown_file_path(Some("nonexistent_file.md"));
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("File not found"));
+    }
+
+    #[test]
+    fn resolve_markdown_file_path_with_no_path_and_todo_exists() {
+        // Create TODO.md for testing
+        let test_content = "# TODO\nSome todo items.";
+        std::fs::write("TODO.md", test_content).expect("Failed to create TODO.md");
+
+        let result = crate::resolve_markdown_file_path(None);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "TODO.md");
+
+        // Clean up
+        std::fs::remove_file("TODO.md").ok();
+    }
+
+    #[test]
+    fn resolve_markdown_file_path_with_no_path_and_no_todo() {
+        // Ensure TODO.md doesn't exist
+        std::fs::remove_file("TODO.md").ok();
+
+        let result = crate::resolve_markdown_file_path(None);
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .contains("Default file TODO.md not found"));
+    }
+
+    #[test]
+    fn load_markdown_content_success() {
+        let test_content = "# Test Content\nThis is test markdown.";
+        std::fs::write("test_load.md", test_content).expect("Failed to create test file");
+
+        let result = crate::load_markdown_content("test_load.md");
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), test_content);
+
+        // Clean up
+        std::fs::remove_file("test_load.md").ok();
+    }
+
+    #[test]
+    fn load_markdown_content_failure() {
+        let result = crate::load_markdown_content("nonexistent_file.md");
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Failed to read file"));
     }
 }

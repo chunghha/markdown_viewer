@@ -50,13 +50,19 @@ tasks:
     desc: Run the markdown viewer
     deps: [fmt, lint]
     cmds:
-      - cargo run
+      - cargo run {{.ARGS}}
+
+  run-with:
+    desc: "Run the markdown viewer with a specific file (usage: task run-with CLI_ARGS=file.md)"
+    deps: [fmt, lint]
+    cmds:
+      - cargo run -- {{.CLI_ARGS}}
 
   run-release:
     desc: Run the markdown viewer (release build)
     deps: [fmt, lint]
     cmds:
-      - cargo run --release
+      - cargo run --release {{.ARGS}}
 
   clean:
     desc: Clean build artifacts
@@ -104,7 +110,7 @@ tasks:
   dev:
     desc: Development mode - rebuild and run on file changes (requires cargo-watch)
     cmds:
-      - cargo watch -x run
+      - cargo watch -x "run {{.ARGS}}"
 
   install-tools:
     desc: Install useful development tools
