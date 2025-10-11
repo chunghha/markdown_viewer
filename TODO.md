@@ -19,7 +19,7 @@ The core scrolling functionality has been **fully implemented and tested**. All 
   - [x] Accept file path as CLI argument
   - [ ] Support multiple file formats (.md, .markdown, .txt)
   - [ ] Add file validation and error handling
-  - [ ] Default to README.md if no argument provided
+  - [x] Default to README.md if no argument provided
 
 - [ ] **File Watching**
   - [ ] Auto-reload when file changes

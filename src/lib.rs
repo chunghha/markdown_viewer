@@ -398,11 +398,16 @@ pub fn resolve_markdown_file_path(file_path: Option<&str>) -> Result<String, Str
             }
         }
         None => {
-            let default_path = "TODO.md";
-            if Path::new(default_path).exists() {
-                Ok(default_path.to_string())
+            // Try README.md first, then TODO.md as fallback
+            let readme_path = "README.md";
+            let todo_path = "TODO.md";
+
+            if Path::new(readme_path).exists() {
+                Ok(readme_path.to_string())
+            } else if Path::new(todo_path).exists() {
+                Ok(todo_path.to_string())
             } else {
-                Err("Default file TODO.md not found. Please specify a markdown file.".to_string())
+                Err("Default files README.md and TODO.md not found. Please specify a markdown file.".to_string())
             }
         }
     }
@@ -553,10 +558,39 @@ mod tests {
     }
 
     #[test]
-    fn resolve_markdown_file_path_with_no_path_and_todo_exists() {
-        // Create TODO.md for testing
-        let test_content = "# TODO\nSome todo items.";
-        std::fs::write("TODO.md", test_content).expect("Failed to create TODO.md");
+    fn resolve_markdown_file_path_with_no_path_and_readme_exists() {
+        // Create unique test files to avoid interference with other tests
+        let readme_content = "# README\nProject documentation.";
+        std::fs::write("test_readme_primary.md", readme_content)
+            .expect("Failed to create test README");
+
+        // Also create a TODO file to verify README is preferred
+        let todo_content = "# TODO\nSome todo items.";
+        std::fs::write("test_todo_secondary.md", todo_content).expect("Failed to create test TODO");
+
+        // Test the logic by temporarily renaming files to match expected names
+        std::fs::rename("test_readme_primary.md", "README.md").ok();
+        std::fs::rename("test_todo_secondary.md", "TODO.md").ok();
+
+        let result = crate::resolve_markdown_file_path(None);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "README.md");
+
+        // Clean up
+        std::fs::remove_file("README.md").ok();
+        std::fs::remove_file("TODO.md").ok();
+    }
+
+    #[test]
+    fn resolve_markdown_file_path_with_no_path_and_todo_fallback() {
+        // Ensure README.md doesn't exist, but create TODO.md to test fallback
+        std::fs::remove_file("README.md").ok();
+
+        let todo_content = "# TODO\nSome todo items.";
+        std::fs::write("test_todo_fallback.md", todo_content).expect("Failed to create test TODO");
+
+        // Rename to expected filename for test
+        std::fs::rename("test_todo_fallback.md", "TODO.md").ok();
 
         let result = crate::resolve_markdown_file_path(None);
         assert!(result.is_ok());
@@ -567,15 +601,16 @@ mod tests {
     }
 
     #[test]
-    fn resolve_markdown_file_path_with_no_path_and_no_todo() {
-        // Ensure TODO.md doesn't exist
+    fn resolve_markdown_file_path_with_no_path_and_no_defaults() {
+        // Ensure both README.md and TODO.md don't exist
+        std::fs::remove_file("README.md").ok();
         std::fs::remove_file("TODO.md").ok();
 
         let result = crate::resolve_markdown_file_path(None);
         assert!(result.is_err());
         assert!(result
             .unwrap_err()
-            .contains("Default file TODO.md not found"));
+            .contains("Default files README.md and TODO.md not found"));
     }
 
     #[test]
