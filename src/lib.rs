@@ -13,21 +13,21 @@ pub const PRIMARY_FONT: &str = "Google Sans Code";
 pub const CODE_FONT: &str = "monospace";
 
 pub const BG_COLOR: Rgba = Rgba {
-    r: 0.95,
-    g: 0.958,
-    b: 0.977,
+    r: 0.992,
+    g: 0.980,
+    b: 0.965,
     a: 1.0,
 };
 pub const TEXT_COLOR: Rgba = Rgba {
-    r: 0.066,
-    g: 0.133,
-    b: 0.133,
+    r: 0.239,
+    g: 0.114,
+    b: 0.114,
     a: 1.0,
 };
 pub const CODE_BG_COLOR: Rgba = Rgba {
-    r: 0.88,
-    g: 0.96,
-    b: 0.88,
+    r: 0.980,
+    g: 0.953,
+    b: 0.910,
     a: 1.0,
 };
 pub const BLOCKQUOTE_BORDER_COLOR: Rgba = Rgba {

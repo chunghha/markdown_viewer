@@ -54,7 +54,7 @@ cargo build --release
 
 ### Usage
 ```bash
-# Run with default TODO.md file
+# Run with default file (e.g., README.md or TODO.md)
 cargo run
 
 # Run with a specific Markdown file
@@ -65,8 +65,12 @@ cargo run -- path/to/your/file.md
 cargo run -- --help
 
 # OR with Task
+# Run with default file
 task run
+
+# Run with a specific file
 task run -- README.md
+task run-release -- path/to/your/file.md
 
 # The application will load and display the Markdown file with full scrolling support
 ```
@@ -101,7 +105,8 @@ task test             # Run all tests
 
 # Building and running
 task build            # Build project
-task run              # Run the application
+task run              # Run the application (e.g., 'task run -- file.md')
+task run-release      # Run the application in release mode
 task clean            # Clean build artifacts
 
 # Documentation and dependencies

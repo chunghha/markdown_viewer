@@ -79,22 +79,22 @@ This approach:
 
 ### Mouse Wheel Scrolling
 
-**Fixed Implementation**: Proper direction handling prevents bounds violations:
+**Natural Scrolling Implementation**: The scroll direction is now inverted to match the "natural" scrolling convention found on macOS and other modern operating systems, where the content moves in the same direction as the user's finger movement on a trackpad.
 
 ```rust
 .on_scroll_wheel(cx.listener(|this, event: &ScrollWheelEvent, _, cx| {
     let delta = event.delta.pixel_delta(px(BASE_TEXT_SIZE)).y;
     let delta_f32: f32 = delta.into();
     if delta_f32 > 0.0 {
-        this.scroll_state.scroll_down(delta_f32);
+        this.scroll_state.scroll_up(delta_f32);
     } else {
-        this.scroll_state.scroll_up(-delta_f32);
+        this.scroll_state.scroll_down(-delta_f32);
     }
     cx.notify();
 }))
 ```
 
-**Key Fix**: Previously, the code incorrectly called `scroll_down(delta)` for all wheel events, even when delta was negative (scroll up). This caused negative scroll positions and empty space above the document.
+**Key Fix**: The logic was inverted. Previously, a positive delta (scrolling down on a traditional mouse) would move the content down, which is the reverse of natural scrolling. The implementation now correctly maps a positive delta to `scroll_up` and a negative delta to `scroll_down` to achieve the expected behavior.
 
 ### Keyboard Navigation
 
@@ -185,26 +185,28 @@ This approach:
 
 ## Bug Fixes and Improvements
 
-### Critical Bug Fix: Mouse Wheel Direction
+**Critical Bug Fix: Mouse Wheel Direction**
 
-**Problem**: Mouse wheel scrolling allowed negative scroll positions, causing empty space above document.
+**Problem**: The original implementation used traditional scrolling (e.g., wheel down moves content up), which felt unnatural on platforms like macOS that default to "natural" scrolling.
 
 **Root Cause**: 
+The initial logic directly mapped the wheel's positive `y` delta to scrolling down.
 ```rust
-// Incorrect implementation
-.on_scroll_wheel(cx.listener(|this, event: &ScrollWheelEvent, _, cx| {
-    let delta = event.delta.pixel_delta(px(BASE_TEXT_SIZE)).y;
-    this.scroll_state.scroll_down(delta.into()); // Always calls scroll_down!
-}))
-```
-
-**Solution**: Proper direction handling:
-```rust
-// Correct implementation
+// Original (Traditional) Implementation
 if delta_f32 > 0.0 {
     this.scroll_state.scroll_down(delta_f32);
 } else {
     this.scroll_state.scroll_up(-delta_f32);
+}
+```
+
+**Solution**: The logic was inverted to implement natural scrolling, where the content follows the direction of finger movement.
+```rust
+// Correct (Natural) Implementation
+if delta_f32 > 0.0 {
+    this.scroll_state.scroll_up(delta_f32);
+} else {
+    this.scroll_state.scroll_down(-delta_f32);
 }
 ```
 

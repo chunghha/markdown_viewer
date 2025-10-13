@@ -82,9 +82,9 @@ impl Render for MarkdownViewer {
                 let delta = event.delta.pixel_delta(px(BASE_TEXT_SIZE)).y;
                 let delta_f32: f32 = delta.into();
                 if delta_f32 > 0.0 {
-                    this.scroll_state.scroll_down(delta_f32);
+                    this.scroll_state.scroll_up(delta_f32);
                 } else {
-                    this.scroll_state.scroll_up(-delta_f32);
+                    this.scroll_state.scroll_down(-delta_f32);
                 }
                 cx.notify();
             }))

@@ -47,22 +47,16 @@ tasks:
       - cargo build --release
 
   run:
-    desc: Run the markdown viewer
-    deps: [fmt, lint]
-    cmds:
-      - cargo run {{.ARGS}}
-
-  run-with:
-    desc: "Run the markdown viewer with a specific file (usage: task run-with CLI_ARGS=file.md)"
+    desc: "Run the markdown viewer (debug build). Optionally specify a file, e.g., 'task run -- file.md'"
     deps: [fmt, lint]
     cmds:
       - cargo run -- {{.CLI_ARGS}}
 
   run-release:
-    desc: Run the markdown viewer (release build)
+    desc: "Run the markdown viewer (release build). Optionally specify a file, e.g., 'task run-release -- file.md'"
     deps: [fmt, lint]
     cmds:
-      - cargo run --release {{.ARGS}}
+      - cargo run --release -- {{.CLI_ARGS}}
 
   clean:
     desc: Clean build artifacts
