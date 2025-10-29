@@ -254,6 +254,22 @@ impl ScrollState {
 
 // ---- Rendering -------------------------------------------------------------
 
+// Helper: collect inline text content for wrapping within block containers
+fn collect_text<'a>(node: &'a AstNode<'a>) -> String {
+    let mut out = String::new();
+    match &node.data.borrow().value {
+        NodeValue::Text(text) => out.push_str(&String::from_utf8_lossy(text.as_bytes())),
+        NodeValue::Code(code) => out.push_str(&String::from_utf8_lossy(code.literal.as_bytes())),
+        NodeValue::LineBreak | NodeValue::SoftBreak => out.push('\n'),
+        _ => {
+            for child in node.children() {
+                out.push_str(&collect_text(child));
+            }
+        }
+    }
+    out
+}
+
 pub fn render_markdown_ast<'a, T>(node: &'a AstNode<'a>, _cx: &mut Context<T>) -> AnyElement {
     match &node.data.borrow().value {
         NodeValue::Document => div()
@@ -267,12 +283,12 @@ pub fn render_markdown_ast<'a, T>(node: &'a AstNode<'a>, _cx: &mut Context<T>) -
                 .parent()
                 .is_some_and(|p| matches!(p.data.borrow().value, NodeValue::Item(_)));
 
-            let mut p = div().flex();
+            let mut p = div().w_full();
             if !is_in_list_item {
                 p = p.mb_2();
             }
-            p.children(node.children().map(|child| render_markdown_ast(child, _cx)))
-                .into_any_element()
+            let text = collect_text(node);
+            p.child(text).into_any_element()
         }
 
         NodeValue::Heading(heading) => {
@@ -284,13 +300,16 @@ pub fn render_markdown_ast<'a, T>(node: &'a AstNode<'a>, _cx: &mut Context<T>) -
                 5 => px(H5_SIZE),
                 _ => px(H6_SIZE),
             };
-            div()
-                .flex()
-                .text_size(text_size)
-                .font_weight(FontWeight::SEMIBOLD)
-                .mt(px((heading.level == 1) as u8 as f32 * 4.0)) // small spacing tweak for top-level
-                .children(node.children().map(|child| render_markdown_ast(child, _cx)))
-                .into_any_element()
+            {
+                let text = collect_text(node);
+                div()
+                    .w_full()
+                    .text_size(text_size)
+                    .font_weight(FontWeight::SEMIBOLD)
+                    .mt(px((heading.level == 1) as u8 as f32 * 4.0))
+                    .child(text)
+                    .into_any_element()
+            }
         }
 
         NodeValue::Text(text) => div()
@@ -321,11 +340,13 @@ pub fn render_markdown_ast<'a, T>(node: &'a AstNode<'a>, _cx: &mut Context<T>) -
                     comrak::nodes::ListType::Bullet => "•".to_string(),
                     comrak::nodes::ListType::Ordered => format!("{}.", items.len() + 1),
                 };
-                let content =
-                    div().children(item.children().map(|child| render_markdown_ast(child, _cx)));
+                let content = div()
+                    .w_full()
+                    .children(item.children().map(|child| render_markdown_ast(child, _cx)));
                 items.push(
                     div()
                         .flex()
+                        .w_full()
                         .mb_1()
                         .child(div().mr_2().child(marker))
                         .child(content),
@@ -338,7 +359,6 @@ pub fn render_markdown_ast<'a, T>(node: &'a AstNode<'a>, _cx: &mut Context<T>) -
             // Could surface destination (link.url) via tooltip or on-click navigation later.
             let _href = &link.url; // Already a String (per comrak 0.43); avoid unnecessary conversion
             div()
-                .flex()
                 .text_color(LINK_COLOR)
                 .underline()
                 .children(node.children().map(|child| render_markdown_ast(child, _cx)))
@@ -346,19 +366,16 @@ pub fn render_markdown_ast<'a, T>(node: &'a AstNode<'a>, _cx: &mut Context<T>) -
         }
 
         NodeValue::Strong => div()
-            .flex()
             .font_weight(FontWeight::BOLD)
             .children(node.children().map(|child| render_markdown_ast(child, _cx)))
             .into_any_element(),
 
         NodeValue::Emph => div()
-            .flex()
             .italic()
             .children(node.children().map(|child| render_markdown_ast(child, _cx)))
             .into_any_element(),
 
         NodeValue::Strikethrough => div()
-            .flex()
             .line_through()
             .children(node.children().map(|child| render_markdown_ast(child, _cx)))
             .into_any_element(),
@@ -379,6 +396,34 @@ pub fn render_markdown_ast<'a, T>(node: &'a AstNode<'a>, _cx: &mut Context<T>) -
 }
 
 // ---- File Handling ---------------------------------------------------------
+
+/// Validates a file path for existence and supported extensions
+///
+/// # Arguments
+/// * `path` - The path to validate
+///
+/// # Returns
+/// * `Ok(String)` - The validated path
+/// * `Err(String)` - Error message if validation fails
+fn validate_file(path: &str) -> Result<String, String> {
+    let file_path = Path::new(path);
+    if !file_path.exists() {
+        return Err(format!("File not found: {}", path));
+    }
+
+    let extension = file_path
+        .extension()
+        .and_then(|s| s.to_str())
+        .unwrap_or("");
+
+    match extension {
+        "md" | "markdown" | "txt" => Ok(path.to_string()),
+        _ => Err(format!(
+            "Unsupported file type: '{}'. Please use .md, .markdown, or .txt",
+            path
+        )),
+    }
+}
 
 /// Resolves the markdown file path based on CLI argument or default
 ///

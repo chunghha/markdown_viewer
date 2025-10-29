@@ -92,6 +92,7 @@ impl Render for MarkdownViewer {
                 div().flex().size_full().overflow_hidden().child(
                     div()
                         .flex_col()
+                        .w_full()
                         .p_4()
                         .relative()
                         .top(px(-self.scroll_state.scroll_y))
