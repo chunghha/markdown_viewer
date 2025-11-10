@@ -1,5 +1,5 @@
 use clap::Parser;
-use comrak::{parse_document, Arena, ComrakOptions};
+use comrak::{parse_document, Arena, Options};
 use gpui::{
     div, prelude::*, px, App, Application, Context, IntoElement, KeyDownEvent, Render,
     ScrollWheelEvent, Window, WindowOptions,
@@ -44,7 +44,7 @@ impl MarkdownViewer {
 impl Render for MarkdownViewer {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let arena = Arena::new();
-        let root = parse_document(&arena, &self.markdown_content, &ComrakOptions::default());
+        let root = parse_document(&arena, &self.markdown_content, &Options::default());
 
         div()
             .flex()

@@ -397,34 +397,6 @@ pub fn render_markdown_ast<'a, T>(node: &'a AstNode<'a>, _cx: &mut Context<T>) -
 
 // ---- File Handling ---------------------------------------------------------
 
-/// Validates a file path for existence and supported extensions
-///
-/// # Arguments
-/// * `path` - The path to validate
-///
-/// # Returns
-/// * `Ok(String)` - The validated path
-/// * `Err(String)` - Error message if validation fails
-fn validate_file(path: &str) -> Result<String, String> {
-    let file_path = Path::new(path);
-    if !file_path.exists() {
-        return Err(format!("File not found: {}", path));
-    }
-
-    let extension = file_path
-        .extension()
-        .and_then(|s| s.to_str())
-        .unwrap_or("");
-
-    match extension {
-        "md" | "markdown" | "txt" => Ok(path.to_string()),
-        _ => Err(format!(
-            "Unsupported file type: '{}'. Please use .md, .markdown, or .txt",
-            path
-        )),
-    }
-}
-
 /// Resolves the markdown file path based on CLI argument or default
 ///
 /// # Arguments
