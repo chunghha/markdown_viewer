@@ -6,11 +6,127 @@
 use super::style::*;
 use comrak::nodes::{AstNode, NodeValue};
 use gpui::{
-    AnyElement, Context, FontWeight, InteractiveElement, IntoElement, MouseButton, SharedString,
-    div, prelude::*, px,
+    AnyElement, ClipboardItem, Context, FontWeight, InteractiveElement, IntoElement, MouseButton,
+    Rgba, SharedString, div, prelude::*, px,
 };
-
+use std::sync::OnceLock;
+use syntect::easy::HighlightLines;
+use syntect::highlighting::ThemeSet;
+use syntect::parsing::SyntaxSet;
 use tracing::{debug, error};
+
+static SYNTAX_SET: OnceLock<SyntaxSet> = OnceLock::new();
+static THEME_SET: OnceLock<ThemeSet> = OnceLock::new();
+
+fn get_syntax_set() -> &'static SyntaxSet {
+    SYNTAX_SET.get_or_init(SyntaxSet::load_defaults_newlines)
+}
+
+fn get_theme_set() -> &'static ThemeSet {
+    THEME_SET.get_or_init(ThemeSet::load_defaults)
+}
+
+fn syntect_color_to_gpui(color: syntect::highlighting::Color) -> Rgba {
+    Rgba {
+        r: color.r as f32 / 255.0,
+        g: color.g as f32 / 255.0,
+        b: color.b as f32 / 255.0,
+        a: color.a as f32 / 255.0,
+    }
+}
+
+fn render_highlighted_code_block<T: 'static>(
+    code: String,
+    language: String,
+    cx: &mut Context<T>,
+) -> AnyElement {
+    let syntax_set = get_syntax_set();
+    let theme_set = get_theme_set();
+
+    // Use "solarized.light" or fallback to first available
+    let theme = theme_set
+        .themes
+        .get("solarized.light")
+        .or_else(|| theme_set.themes.values().next())
+        .unwrap();
+
+    let syntax = syntax_set
+        .find_syntax_by_token(&language)
+        .unwrap_or_else(|| syntax_set.find_syntax_plain_text());
+
+    let mut highlighter = HighlightLines::new(syntax, theme);
+    let mut lines = Vec::new();
+
+    for (i, line) in code.lines().enumerate() {
+        let ranges: Vec<(syntect::highlighting::Style, &str)> = highlighter
+            .highlight_line(line, syntax_set)
+            .unwrap_or_default();
+
+        let mut line_elements = Vec::new();
+        for (style, text) in ranges {
+            let color = syntect_color_to_gpui(style.foreground);
+            line_elements.push(
+                div()
+                    .text_color(color)
+                    .child(text.to_string())
+                    .into_any_element(),
+            );
+        }
+
+        // Line number
+        let line_number = div()
+            .w_8()
+            .mr_4()
+            .text_color(CODE_LINE_COLOR)
+            .justify_end()
+            .flex()
+            .child((i + 1).to_string());
+
+        lines.push(
+            div()
+                .flex()
+                .w_full()
+                .child(line_number)
+                .child(div().flex().children(line_elements)),
+        );
+    }
+
+    let copy_code = code.clone();
+    let copy_button = div()
+        .absolute()
+        .top_2()
+        .right_2()
+        .bg(COPY_BUTTON_BG_COLOR)
+        .text_color(COPY_BUTTON_TEXT_COLOR)
+        .px_2()
+        .py_1()
+        .rounded_md()
+        .cursor_pointer()
+        .child("Copy")
+        .on_mouse_down(
+            MouseButton::Left,
+            cx.listener(move |_, _, _, cx| {
+                cx.write_to_clipboard(ClipboardItem::new_string(copy_code.clone()));
+            }),
+        );
+
+    div()
+        .relative()
+        .group("code_block")
+        .bg(CODE_BG_COLOR)
+        .p_3()
+        .rounded_md()
+        .font_family(CODE_FONT)
+        .flex_col()
+        .child(
+            div()
+                .invisible()
+                .group_hover("code_block", |style| style.visible())
+                .child(copy_button),
+        )
+        .children(lines)
+        .into_any_element()
+}
 
 /// Helper: collect inline text content for wrapping within block containers
 fn collect_text<'a>(node: &'a AstNode<'a>) -> String {
@@ -89,13 +205,11 @@ pub fn render_markdown_ast<'a, T: 'static>(
             .child(String::from_utf8_lossy(code.literal.as_bytes()).to_string())
             .into_any_element(),
 
-        NodeValue::CodeBlock(code_block) => div()
-            .bg(CODE_BG_COLOR)
-            .p_3()
-            .rounded_md()
-            .font_family(CODE_FONT)
-            .child(String::from_utf8_lossy(code_block.literal.as_bytes()).to_string())
-            .into_any_element(),
+        NodeValue::CodeBlock(code_block) => {
+            let language = code_block.info.clone();
+            let code = code_block.literal.clone();
+            render_highlighted_code_block(code, language, cx)
+        }
 
         NodeValue::List(list) => {
             let mut items = Vec::new();

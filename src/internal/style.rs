@@ -8,7 +8,7 @@ use gpui::Rgba;
 // ---- Fonts -----------------------------------------------------------------
 
 pub const PRIMARY_FONT: &str = "Google Sans Code";
-pub const CODE_FONT: &str = "monospace";
+pub const CODE_FONT: &str = "GeistMono Nerd Font";
 
 // ---- Colors ----------------------------------------------------------------
 
@@ -27,9 +27,30 @@ pub const TEXT_COLOR: Rgba = Rgba {
 };
 
 pub const CODE_BG_COLOR: Rgba = Rgba {
-    r: 0.980,
-    g: 0.953,
-    b: 0.910,
+    r: 0.972,
+    g: 0.960,
+    b: 0.945,
+    a: 1.0,
+};
+
+pub const CODE_LINE_COLOR: Rgba = Rgba {
+    r: 0.45,
+    g: 0.45,
+    b: 0.45,
+    a: 1.0,
+};
+
+pub const COPY_BUTTON_BG_COLOR: Rgba = Rgba {
+    r: 1.0,
+    g: 0.85,
+    b: 0.9,
+    a: 0.9,
+};
+
+pub const COPY_BUTTON_TEXT_COLOR: Rgba = Rgba {
+    r: 0.1,
+    g: 0.15,
+    b: 0.3,
     a: 1.0,
 };
 

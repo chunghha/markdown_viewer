@@ -38,10 +38,10 @@ The core infrastructure has been **fully implemented and tested**. The applicati
   - [x] Column alignment support
   - [ ] Responsive table layout
 
-- [ ] **Code Blocks**
-  - [ ] Syntax highlighting for common languages
-  - [ ] Line numbers for code blocks
-  - [ ] Copy-to-clipboard functionality
+- [x] **Code Blocks**
+  - [x] Syntax highlighting for common languages
+  - [x] Line numbers for code blocks
+  - [x] Copy-to-clipboard functionality
 
 - [x] **Links and Images**
   - [x] Clickable links (open in browser)
