@@ -3,9 +3,13 @@
 //! This module contains the core functionality for rendering Markdown content
 //! with scrolling support.
 
+pub mod config;
+
+use anyhow::{Context as _, Result};
 use comrak::nodes::{AstNode, NodeValue};
-use gpui::{div, prelude::*, px, AnyElement, FontWeight, IntoElement, Rgba};
+use gpui::{AnyElement, Context, FontWeight, IntoElement, Rgba, div, prelude::*, px};
 use std::path::Path;
+use tracing::{debug, info, trace};
 
 // ---- Style Constants -------------------------------------------------------
 
@@ -97,11 +101,21 @@ impl ScrollState {
     }
 
     pub fn scroll_up(&mut self, amount: f32) {
+        let old_y = self.scroll_y;
         self.scroll_y = (self.scroll_y - amount).max(0.0);
+        trace!(
+            "Scroll up: {} -> {} (delta: {})",
+            old_y, self.scroll_y, amount
+        );
     }
 
     pub fn scroll_down(&mut self, amount: f32) {
+        let old_y = self.scroll_y;
         self.scroll_y = (self.scroll_y + amount).min(self.max_scroll_y);
+        trace!(
+            "Scroll down: {} -> {} (delta: {})",
+            old_y, self.scroll_y, amount
+        );
     }
 
     pub fn scroll_to_top(&mut self) {
@@ -122,6 +136,10 @@ impl ScrollState {
 
     pub fn set_max_scroll(&mut self, content_height: f32, viewport_height: f32) {
         self.max_scroll_y = (content_height - viewport_height).max(0.0);
+        debug!(
+            "Set max scroll: content={}, viewport={}, max={}",
+            content_height, viewport_height, self.max_scroll_y
+        );
         // Ensure current scroll position is still valid
         self.scroll_y = self.scroll_y.min(self.max_scroll_y);
         self.target_scroll_y = self.target_scroll_y.min(self.max_scroll_y);
@@ -220,16 +238,14 @@ impl ScrollState {
     pub fn load_scroll_state(&mut self, file_path: &str) -> Result<(), Box<dyn std::error::Error>> {
         let content = std::fs::read_to_string(file_path)?;
         for line in content.lines() {
-            if let Some((key, value)) = line.split_once(": ") {
-                if let Ok(val) = value.parse::<f32>() {
-                    match key {
-                        "scroll_y" => self.scroll_y = val.max(0.0).min(self.max_scroll_y),
-                        "target_scroll_y" => {
-                            self.target_scroll_y = val.max(0.0).min(self.max_scroll_y)
-                        }
-                        "max_scroll_y" => self.max_scroll_y = val.max(0.0),
-                        _ => {}
-                    }
+            if let Some((key, value)) = line.split_once(": ")
+                && let Ok(val) = value.parse::<f32>()
+            {
+                match key {
+                    "scroll_y" => self.scroll_y = val.max(0.0).min(self.max_scroll_y),
+                    "target_scroll_y" => self.target_scroll_y = val.max(0.0).min(self.max_scroll_y),
+                    "max_scroll_y" => self.max_scroll_y = val.max(0.0),
+                    _ => {}
                 }
             }
         }
@@ -404,27 +420,34 @@ pub fn render_markdown_ast<'a, T>(node: &'a AstNode<'a>, _cx: &mut Context<T>) -
 ///
 /// # Returns
 /// * `Ok(String)` - The resolved file path
-/// * `Err(String)` - Error message if file resolution fails
-pub fn resolve_markdown_file_path(file_path: Option<&str>) -> Result<String, String> {
+/// * `Err` - Error if file resolution fails
+pub fn resolve_markdown_file_path(file_path: Option<&str>) -> Result<String> {
     match file_path {
         Some(path) => {
+            debug!("Resolving file path: {}", path);
             if Path::new(path).exists() {
+                info!("File found: {}", path);
                 Ok(path.to_string())
             } else {
-                Err(format!("File not found: {}", path))
+                anyhow::bail!("File not found: {}", path);
             }
         }
         None => {
+            debug!("No file specified, trying default files");
             // Try README.md first, then TODO.md as fallback
             let readme_path = "README.md";
             let todo_path = "TODO.md";
 
             if Path::new(readme_path).exists() {
+                info!("Using default file: {}", readme_path);
                 Ok(readme_path.to_string())
             } else if Path::new(todo_path).exists() {
+                info!("Using fallback file: {}", todo_path);
                 Ok(todo_path.to_string())
             } else {
-                Err("Default files README.md and TODO.md not found. Please specify a markdown file.".to_string())
+                anyhow::bail!(
+                    "Default files README.md and TODO.md not found. Please specify a markdown file."
+                );
             }
         }
     }
@@ -437,15 +460,26 @@ pub fn resolve_markdown_file_path(file_path: Option<&str>) -> Result<String, Str
 ///
 /// # Returns
 /// * `Ok(String)` - The file content
-/// * `Err(String)` - Error message if loading fails
-pub fn load_markdown_content(file_path: &str) -> Result<String, String> {
-    std::fs::read_to_string(file_path)
-        .map_err(|e| format!("Failed to read file '{}': {}", file_path, e))
+/// * `Err` - Error if loading fails
+pub fn load_markdown_content(file_path: &str) -> Result<String> {
+    debug!("Loading markdown content from: {}", file_path);
+    let content = std::fs::read_to_string(file_path)
+        .context(format!("Failed to read file '{}'", file_path))?;
+    info!(
+        "Successfully loaded {} bytes from {}",
+        content.len(),
+        file_path
+    );
+    Ok(content)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::Mutex;
+
+    // Mutex to serialize tests that manipulate README.md and TODO.md
+    static FILE_TEST_LOCK: Mutex<()> = Mutex::new(());
 
     #[test]
     fn scroll_state_initializes_correctly() {
@@ -571,63 +605,98 @@ mod tests {
     fn resolve_markdown_file_path_with_nonexistent_file() {
         let result = crate::resolve_markdown_file_path(Some("nonexistent_file.md"));
         assert!(result.is_err());
-        assert!(result.unwrap_err().contains("File not found"));
+        assert!(result.unwrap_err().to_string().contains("File not found"));
     }
 
     #[test]
     fn resolve_markdown_file_path_with_no_path_and_readme_exists() {
-        // Create unique test files to avoid interference with other tests
+        let _lock = FILE_TEST_LOCK.lock().unwrap();
+
+        // Backup existing files if they exist
+        let readme_backup = std::fs::read_to_string("README.md").ok();
+        let todo_backup = std::fs::read_to_string("TODO.md").ok();
+
+        // Create test files
         let readme_content = "# README\nProject documentation.";
-        std::fs::write("test_readme_primary.md", readme_content)
-            .expect("Failed to create test README");
+        std::fs::write("README.md", readme_content).expect("Failed to create test README");
 
-        // Also create a TODO file to verify README is preferred
         let todo_content = "# TODO\nSome todo items.";
-        std::fs::write("test_todo_secondary.md", todo_content).expect("Failed to create test TODO");
-
-        // Test the logic by temporarily renaming files to match expected names
-        std::fs::rename("test_readme_primary.md", "README.md").ok();
-        std::fs::rename("test_todo_secondary.md", "TODO.md").ok();
+        std::fs::write("TODO.md", todo_content).expect("Failed to create test TODO");
 
         let result = crate::resolve_markdown_file_path(None);
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), "README.md");
 
-        // Clean up
-        std::fs::remove_file("README.md").ok();
-        std::fs::remove_file("TODO.md").ok();
+        // Restore original files or clean up
+        if let Some(content) = readme_backup {
+            std::fs::write("README.md", content).ok();
+        } else {
+            std::fs::remove_file("README.md").ok();
+        }
+        if let Some(content) = todo_backup {
+            std::fs::write("TODO.md", content).ok();
+        } else {
+            std::fs::remove_file("TODO.md").ok();
+        }
     }
 
     #[test]
     fn resolve_markdown_file_path_with_no_path_and_todo_fallback() {
-        // Ensure README.md doesn't exist, but create TODO.md to test fallback
+        let _lock = FILE_TEST_LOCK.lock().unwrap();
+
+        // Backup existing files if they exist
+        let readme_backup = std::fs::read_to_string("README.md").ok();
+        let todo_backup = std::fs::read_to_string("TODO.md").ok();
+
+        // Ensure README.md doesn't exist for this test
         std::fs::remove_file("README.md").ok();
 
         let todo_content = "# TODO\nSome todo items.";
-        std::fs::write("test_todo_fallback.md", todo_content).expect("Failed to create test TODO");
-
-        // Rename to expected filename for test
-        std::fs::rename("test_todo_fallback.md", "TODO.md").ok();
+        std::fs::write("TODO.md", todo_content).expect("Failed to create test TODO");
 
         let result = crate::resolve_markdown_file_path(None);
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), "TODO.md");
 
-        // Clean up
-        std::fs::remove_file("TODO.md").ok();
+        // Restore original files or clean up
+        if let Some(content) = readme_backup {
+            std::fs::write("README.md", content).ok();
+        }
+        if let Some(content) = todo_backup {
+            std::fs::write("TODO.md", content).ok();
+        } else {
+            std::fs::remove_file("TODO.md").ok();
+        }
     }
 
     #[test]
     fn resolve_markdown_file_path_with_no_path_and_no_defaults() {
+        let _lock = FILE_TEST_LOCK.lock().unwrap();
+
+        // Backup existing files
+        let readme_backup = std::fs::read_to_string("README.md").ok();
+        let todo_backup = std::fs::read_to_string("TODO.md").ok();
+
         // Ensure both README.md and TODO.md don't exist
         std::fs::remove_file("README.md").ok();
         std::fs::remove_file("TODO.md").ok();
 
         let result = crate::resolve_markdown_file_path(None);
         assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .contains("Default files README.md and TODO.md not found"));
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("Default files README.md and TODO.md not found")
+        );
+
+        // Restore original files
+        if let Some(content) = readme_backup {
+            std::fs::write("README.md", content).ok();
+        }
+        if let Some(content) = todo_backup {
+            std::fs::write("TODO.md", content).ok();
+        }
     }
 
     #[test]
@@ -647,6 +716,11 @@ mod tests {
     fn load_markdown_content_failure() {
         let result = crate::load_markdown_content("nonexistent_file.md");
         assert!(result.is_err());
-        assert!(result.unwrap_err().contains("Failed to read file"));
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("Failed to read file")
+        );
     }
 }

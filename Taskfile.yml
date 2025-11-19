@@ -34,6 +34,11 @@ tasks:
     cmds:
       - cargo test -- --nocapture
 
+  test-debug:
+    desc: Run tests with debug logging
+    cmds:
+      - RUST_LOG=debug cargo test
+
   build:
     desc: Build the project
     deps: [fmt, lint]
@@ -57,6 +62,16 @@ tasks:
     deps: [fmt, lint]
     cmds:
       - cargo run --release -- {{.CLI_ARGS}}
+
+  run-debug:
+    desc: "Run with debug logging enabled"
+    cmds:
+      - RUST_LOG=debug cargo run -- {{.CLI_ARGS}}
+
+  run-trace:
+    desc: "Run with trace logging enabled"
+    cmds:
+      - RUST_LOG=trace cargo run -- {{.CLI_ARGS}}
 
   clean:
     desc: Clean build artifacts
@@ -127,3 +142,14 @@ tasks:
     desc: Install test coverage tool
     cmds:
       - cargo install cargo-tarpaulin
+
+  config-example:
+    desc: Copy example configuration to config.ron
+    cmds:
+      - cp config.example.ron config.ron
+      - echo "Created config.ron from example. Edit it to customize settings."
+
+  config-validate:
+    desc: Validate configuration by running with debug logging
+    cmds:
+      - RUST_LOG=debug cargo run -- --help

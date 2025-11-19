@@ -9,6 +9,9 @@ A desktop Markdown viewer built with Rust and GPUI, featuring advanced scrolling
 - **Rich Text Display**: Styled headings, lists, code blocks, links, emphasis, and blockquotes
 - **CLI Interface**: Command-line argument support for loading any Markdown file
 - **Clean Interface**: Minimalist design focused on readability
+- **Configuration System**: Customizable settings via RON configuration files
+- **Structured Logging**: Debug and trace logging with `tracing`
+- **Professional Error Handling**: Contextual error messages with `anyhow`
 
 ### Advanced Scrolling
 - **Mouse Wheel Scrolling**: Smooth pixel-perfect scrolling with proper direction handling
@@ -75,6 +78,46 @@ task run-release -- path/to/your/file.md
 # The application will load and display the Markdown file with full scrolling support
 ```
 
+### Configuration
+
+Customize the viewer by creating a `config.ron` file:
+
+```bash
+# Copy the example configuration
+cp config.example.ron config.ron
+
+# Edit config.ron to customize settings
+# - Window dimensions
+# - Scroll behavior
+# - Theme and fonts
+# - Logging level
+```
+
+**Example configuration:**
+```ron
+(
+    window: (width: 1280.0, height: 900.0, title: "My Markdown Viewer"),
+    scroll: (page_scroll_percentage: 0.9, arrow_key_increment: 30.0),
+    theme: (base_text_size: 20.0, primary_font: "Arial"),
+    logging: (default_level: "debug"),
+)
+```
+
+### Logging
+
+Control logging output with the `RUST_LOG` environment variable:
+
+```bash
+# Info level (default)
+cargo run
+
+# Debug level - shows configuration and detailed operations
+RUST_LOG=debug cargo run
+
+# Trace level - shows all scroll events
+RUST_LOG=trace cargo run
+```
+
 ### Development Workflow
 
 This project includes a comprehensive `Taskfile.yml` for streamlined development:
@@ -133,6 +176,10 @@ cargo fmt
 - **comrak**: CommonMark-compliant Markdown parsing
 - **gpui**: Modern Rust GUI framework for desktop applications
 - **clap**: Command-line argument parsing for file specification
+- **anyhow**: Ergonomic error handling with context
+- **tracing**: Structured logging and diagnostics
+- **ron**: Rusty Object Notation for configuration files
+- **serde**: Serialization/deserialization framework
 
 ### Performance
 - **Efficient Rendering**: Transform-based scrolling without content re-rendering
@@ -140,7 +187,7 @@ cargo fmt
 - **Responsive**: 60 FPS scrolling with large documents
 
 ### Code Quality
-- **15 Unit Tests**: Comprehensive test coverage for scrolling and file handling logic
+- **31 Unit Tests**: Comprehensive test coverage for scrolling, file handling, and configuration
 - **Clippy Clean**: Passes all Rust linting checks
 - **Well Documented**: Inline documentation and implementation guides
 
@@ -150,11 +197,13 @@ cargo fmt
 markdown_viewer/
 ├── src/
 │   ├── main.rs           # Application entry point and MarkdownViewer
-│   └── lib.rs            # ScrollState and rendering logic
+│   ├── lib.rs            # ScrollState and rendering logic
+│   └── config.rs         # Configuration management
 ├── docs/
 │   └── implementations/
 │       └── 0001_scrolling.md  # Detailed scrolling implementation
-├── TODO.md               # Example Markdown content
+├── config.example.ron    # Example configuration file
+├── TODO.md               # Development roadmap
 ├── AGENTS.md             # Development guidelines and TDD practices
 ├── Taskfile.yml          # Development task automation
 └── README.md             # This file
@@ -168,14 +217,18 @@ markdown_viewer/
 - **Content Height**: Accurate estimation prevents content cutoff
 
 ### New Features ✅
-- **CLI Arguments**: Accept file path as command-line argument with fallback to TODO.md
+- **CLI Arguments**: Accept file path as command-line argument with fallback to README.md/TODO.md
 - **File Validation**: Proper error handling for missing or invalid files
 - **Usage Help**: Built-in help system with `--help` flag
+- **Configuration System**: RON-based configuration for customizable settings
+- **Structured Logging**: Tracing integration for debugging and monitoring
+- **Error Handling**: Professional error messages with anyhow context
 
 ### Code Quality ✅
 - **Meaningful Constants**: Extracted magic numbers to named constants
 - **Enhanced Documentation**: Updated all project documentation
-- **Test Coverage**: Added bounds checking, file handling, and validation tests
+- **Test Coverage**: 31 tests covering scrolling, file handling, configuration, and validation
+- **Safe Tests**: File-manipulating tests now preserve project files
 
 ## Development Philosophy
 
@@ -213,12 +266,14 @@ task pre-commit
 
 ## Future Enhancements
 
+- **Configuration UI**: In-app settings panel
 - **Multiple File Formats**: Support for .markdown, .txt extensions
 - **File Watching**: Auto-reload when files change
 - **Syntax Highlighting**: Code block syntax highlighting
 - **Table Support**: Enhanced table rendering
 - **Image Display**: Inline image support
 - **Export Options**: PDF/HTML export functionality
+- **Theme System**: Multiple color schemes and custom themes
 
 ## Resources
 

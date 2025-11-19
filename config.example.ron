@@ -1,0 +1,59 @@
+// Example configuration file for Markdown Viewer
+// Copy this to config.ron and customize as needed
+
+(
+    window: (
+        // Window dimensions in pixels
+        width: 1024.0,
+        height: 768.0,
+        
+        // Window title
+        title: "Markdown Viewer",
+    ),
+    
+    files: (
+        // Default files to try loading (in order) when no file is specified
+        default_files: ["README.md", "TODO.md"],
+        
+        // Supported file extensions
+        supported_extensions: ["md", "markdown", "txt"],
+    ),
+    
+    scroll: (
+        // Page scroll percentage (0.0 to 1.0)
+        // PageUp/PageDown will scroll this percentage of the viewport
+        page_scroll_percentage: 0.8,
+        
+        // Arrow key scroll increment in pixels
+        arrow_key_increment: 20.0,
+        
+        // Space key scroll percentage (0.0 to 1.0)
+        space_scroll_percentage: 0.2,
+    ),
+    
+    theme: (
+        // Primary font family for text
+        primary_font: "Google Sans Code",
+        
+        // Font family for code blocks
+        code_font: "monospace",
+        
+        // Base text size in pixels
+        base_text_size: 19.2,
+        
+        // Line height multiplier (1.5 = 150% of text size)
+        line_height_multiplier: 1.5,
+        
+        // Additional buffer for content height estimation (pixels)
+        content_height_buffer: 400.0,
+    ),
+    
+    logging: (
+        // Default log level: trace, debug, info, warn, error
+        // Can be overridden with RUST_LOG environment variable
+        default_level: "info",
+        
+        // Enable logging to file (not yet implemented)
+        enable_file_logging: false,
+    ),
+)
