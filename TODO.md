@@ -33,9 +33,9 @@ The core infrastructure has been **fully implemented and tested**. The applicati
   - [ ] Handle file deletion gracefully
 
 ### Phase 2: Enhanced Markdown Support (Medium Priority)
-- [ ] **Tables**
-  - [ ] Basic table rendering
-  - [ ] Column alignment support
+- [x] **Tables**
+  - [x] Basic table rendering
+  - [x] Column alignment support
   - [ ] Responsive table layout
 
 - [ ] **Code Blocks**

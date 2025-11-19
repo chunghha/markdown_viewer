@@ -6,7 +6,7 @@ A desktop Markdown viewer built with Rust and GPUI, featuring advanced scrolling
 
 ### Core Functionality
 - **Markdown Rendering**: Full support for CommonMark-compliant Markdown using `comrak`
-- **Rich Text Display**: Styled headings, lists, code blocks, links, emphasis, and blockquotes
+- **Rich Text Display**: Styled headings, lists, code blocks, links, emphasis, blockquotes, and **tables**
 - **CLI Interface**: Command-line argument support for loading any Markdown file
 - **Clean Interface**: Minimalist design focused on readability
 - **Configuration System**: Customizable settings via RON configuration files
@@ -191,7 +191,7 @@ cargo fmt
 - **Responsive**: 60 FPS scrolling with large documents
 
 ### Code Quality
-- **39 Unit Tests**: Comprehensive test coverage for scrolling, file handling, configuration, and format validation
+- **42 Unit Tests**: Comprehensive test coverage for scrolling, file handling, configuration, format validation, and table rendering
 - **Clippy Clean**: Passes all Rust linting checks
 - **Well Documented**: Inline documentation and implementation guides
 

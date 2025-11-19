@@ -46,7 +46,9 @@ impl MarkdownViewer {
 impl Render for MarkdownViewer {
     fn render(&mut self, _window: &mut Window, cx: &mut GpuiContext<Self>) -> impl IntoElement {
         let arena = Arena::new();
-        let root = parse_document(&arena, &self.markdown_content, &Options::default());
+        let mut options = Options::default();
+        options.extension.table = true; // Enable GFM tables
+        let root = parse_document(&arena, &self.markdown_content, &options);
 
         div()
             .flex()

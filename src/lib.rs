@@ -47,6 +47,21 @@ pub const LINK_COLOR: Rgba = Rgba {
     a: 1.0,
 };
 
+// Table styling constants
+pub const TABLE_BORDER_COLOR: Rgba = Rgba {
+    r: 0.7,
+    g: 0.7,
+    b: 0.7,
+    a: 1.0,
+};
+pub const TABLE_HEADER_BG: Rgba = Rgba {
+    r: 0.15,
+    g: 0.15,
+    b: 0.15,
+    a: 1.0,
+};
+pub const TABLE_CELL_PADDING: f32 = 8.0;
+
 pub const BASE_TEXT_SIZE: f32 = 19.2;
 pub const H1_SIZE: f32 = 38.4;
 pub const H2_SIZE: f32 = 33.6;
@@ -404,11 +419,100 @@ pub fn render_markdown_ast<'a, T>(node: &'a AstNode<'a>, _cx: &mut Context<T>) -
             .children(node.children().map(|child| render_markdown_ast(child, _cx)))
             .into_any_element(),
 
+        // Table rendering
+        NodeValue::Table(table_data) => div()
+            .flex_col()
+            .w_full()
+            .my_2()
+            .border_1()
+            .border_color(TABLE_BORDER_COLOR)
+            .children(
+                node.children()
+                    .map(|row| render_table_row(row, &table_data.alignments, _cx)),
+            )
+            .into_any_element(),
+
+        NodeValue::TableRow(_) => {
+            // Rows should be rendered via render_table_row, but handle gracefully
+            div()
+                .flex()
+                .w_full()
+                .children(node.children().map(|child| render_markdown_ast(child, _cx)))
+                .into_any_element()
+        }
+
+        NodeValue::TableCell => {
+            // Cells should be rendered via render_table_cell, but handle gracefully
+            div()
+                .p(px(TABLE_CELL_PADDING))
+                .children(node.children().map(|child| render_markdown_ast(child, _cx)))
+                .into_any_element()
+        }
+
         // Fallback: walk children
         _ => div()
             .children(node.children().map(|child| render_markdown_ast(child, _cx)))
             .into_any_element(),
     }
+}
+
+/// Render a table row with proper alignment and header styling
+fn render_table_row<'a, T>(
+    row_node: &'a AstNode<'a>,
+    alignments: &[comrak::nodes::TableAlignment],
+    _cx: &mut Context<T>,
+) -> AnyElement {
+    let is_header = matches!(row_node.data.borrow().value, NodeValue::TableRow(true));
+
+    let mut row_div = div()
+        .flex()
+        .w_full()
+        .border_b_1()
+        .border_color(TABLE_BORDER_COLOR);
+
+    if is_header {
+        row_div = row_div.bg(TABLE_HEADER_BG).font_weight(FontWeight::BOLD);
+    }
+
+    // Render cells with alignment
+    let cells: Vec<AnyElement> = row_node
+        .children()
+        .enumerate()
+        .map(|(idx, cell)| render_table_cell(cell, alignments.get(idx), _cx))
+        .collect();
+
+    row_div.children(cells).into_any_element()
+}
+
+/// Render a table cell with alignment
+fn render_table_cell<'a, T>(
+    cell_node: &'a AstNode<'a>,
+    alignment: Option<&comrak::nodes::TableAlignment>,
+    _cx: &mut Context<T>,
+) -> AnyElement {
+    use comrak::nodes::TableAlignment;
+
+    let mut cell_div = div()
+        .flex_1()
+        .p(px(TABLE_CELL_PADDING))
+        .border_r_1()
+        .border_color(TABLE_BORDER_COLOR);
+
+    // Apply alignment
+    cell_div = match alignment {
+        Some(TableAlignment::Left) | None => cell_div.justify_start(),
+        Some(TableAlignment::Center) => cell_div.justify_center(),
+        Some(TableAlignment::Right) => cell_div.justify_end(),
+        Some(TableAlignment::None) => cell_div.justify_start(),
+    };
+
+    cell_div
+        .children(
+            cell_node
+                .children()
+                .map(|child| render_markdown_ast(child, _cx)),
+        )
+        .into_any_element()
 }
 
 // ---- File Handling ---------------------------------------------------------
@@ -834,7 +938,7 @@ mod tests {
 
     #[test]
     fn load_markdown_content_failure() {
-        let result = crate::load_markdown_content("nonexistent_file.md");
+        let result = load_markdown_content("nonexistent_file_xyz.md");
         assert!(result.is_err());
         assert!(
             result
@@ -842,5 +946,70 @@ mod tests {
                 .to_string()
                 .contains("Failed to read file")
         );
+    }
+
+    // ---- Table Rendering Tests ------------------------------------------------
+
+    #[test]
+    fn table_node_parses_from_markdown() {
+        use comrak::nodes::NodeValue;
+        use comrak::{Arena, Options, parse_document};
+
+        let arena = Arena::new();
+        let markdown = "| A | B |\n|---|---|\n| 1 | 2 |";
+        let mut options = Options::default();
+        options.extension.table = true;
+        let root = parse_document(&arena, markdown, &options);
+
+        // Verify it parses and has a table
+        let has_table = root
+            .descendants()
+            .any(|node| matches!(node.data.borrow().value, NodeValue::Table(_)));
+        assert!(has_table, "Markdown should contain a table node");
+    }
+
+    #[test]
+    fn table_with_alignment_parses() {
+        use comrak::nodes::NodeValue;
+        use comrak::{Arena, Options, parse_document};
+
+        let arena = Arena::new();
+        let markdown = "| Left | Center | Right |\n|:-----|:------:|------:|\n| A | B | C |";
+        let mut options = Options::default();
+        options.extension.table = true;
+        let root = parse_document(&arena, markdown, &options);
+
+        let has_table = root
+            .descendants()
+            .any(|node| matches!(node.data.borrow().value, NodeValue::Table(_)));
+        assert!(has_table, "Markdown with aligned table should parse");
+    }
+
+    #[test]
+    fn table_has_header_and_body_rows() {
+        use comrak::nodes::NodeValue;
+        use comrak::{Arena, Options, parse_document};
+
+        let arena = Arena::new();
+        let markdown = "| Header |\n|--------|\n| Data |";
+        let mut options = Options::default();
+        options.extension.table = true;
+        let root = parse_document(&arena, markdown, &options);
+
+        let mut has_header = false;
+        let mut has_body = false;
+
+        for node in root.descendants() {
+            if let NodeValue::TableRow(is_header) = node.data.borrow().value {
+                if is_header {
+                    has_header = true;
+                } else {
+                    has_body = true;
+                }
+            }
+        }
+
+        assert!(has_header, "Table should have header row");
+        assert!(has_body, "Table should have body row");
     }
 }
