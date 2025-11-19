@@ -5,7 +5,12 @@
 
 use super::style::*;
 use comrak::nodes::{AstNode, NodeValue};
-use gpui::{AnyElement, Context, FontWeight, IntoElement, div, prelude::*, px};
+use gpui::{
+    AnyElement, Context, FontWeight, InteractiveElement, IntoElement, MouseButton, SharedString,
+    div, prelude::*, px,
+};
+
+use tracing::{debug, error};
 
 /// Helper: collect inline text content for wrapping within block containers
 fn collect_text<'a>(node: &'a AstNode<'a>) -> String {
@@ -24,11 +29,14 @@ fn collect_text<'a>(node: &'a AstNode<'a>) -> String {
 }
 
 /// Render a Markdown AST node to a GPUI element
-pub fn render_markdown_ast<'a, T>(node: &'a AstNode<'a>, _cx: &mut Context<T>) -> AnyElement {
+pub fn render_markdown_ast<'a, T: 'static>(
+    node: &'a AstNode<'a>,
+    cx: &mut Context<T>,
+) -> AnyElement {
     match &node.data.borrow().value {
         NodeValue::Document => div()
             .flex_col()
-            .children(node.children().map(|child| render_markdown_ast(child, _cx)))
+            .children(node.children().map(|child| render_markdown_ast(child, cx)))
             .into_any_element(),
 
         NodeValue::Paragraph => {
@@ -37,12 +45,12 @@ pub fn render_markdown_ast<'a, T>(node: &'a AstNode<'a>, _cx: &mut Context<T>) -
                 .parent()
                 .is_some_and(|p| matches!(p.data.borrow().value, NodeValue::Item(_)));
 
-            let mut p = div().w_full();
+            let mut p = div().w_full().flex().flex_row().flex_wrap();
             if !is_in_list_item {
                 p = p.mb_2();
             }
-            let text = collect_text(node);
-            p.child(text).into_any_element()
+            p.children(node.children().map(|child| render_markdown_ast(child, cx)))
+                .into_any_element()
         }
 
         NodeValue::Heading(heading) => {
@@ -55,13 +63,15 @@ pub fn render_markdown_ast<'a, T>(node: &'a AstNode<'a>, _cx: &mut Context<T>) -
                 _ => px(H6_SIZE),
             };
             {
-                let text = collect_text(node);
                 div()
                     .w_full()
+                    .flex()
+                    .flex_row()
+                    .flex_wrap()
                     .text_size(text_size)
                     .font_weight(FontWeight::SEMIBOLD)
                     .mt(px((heading.level == 1) as u8 as f32 * 4.0))
-                    .child(text)
+                    .children(node.children().map(|child| render_markdown_ast(child, cx)))
                     .into_any_element()
             }
         }
@@ -96,7 +106,7 @@ pub fn render_markdown_ast<'a, T>(node: &'a AstNode<'a>, _cx: &mut Context<T>) -
                 };
                 let content = div()
                     .w_full()
-                    .children(item.children().map(|child| render_markdown_ast(child, _cx)));
+                    .children(item.children().map(|child| render_markdown_ast(child, cx)));
                 items.push(
                     div()
                         .flex()
@@ -110,28 +120,61 @@ pub fn render_markdown_ast<'a, T>(node: &'a AstNode<'a>, _cx: &mut Context<T>) -
         }
 
         NodeValue::Link(link) => {
-            // Could surface destination (link.url) via tooltip or on-click navigation later.
-            let _href = &link.url; // Already a String (per comrak 0.43); avoid unnecessary conversion
-            div()
-                .text_color(LINK_COLOR)
-                .underline()
-                .children(node.children().map(|child| render_markdown_ast(child, _cx)))
-                .into_any_element()
+            // Convert URL to owned String for capture in closure
+            let url = link.url.clone();
+            let link_text = collect_text(node);
+
+            debug!("Rendering link '{}' -> '{}'", link_text, url);
+
+            // If URL is empty, render it as plain text (muted) and do not attach
+            // a click handler. Otherwise, style it as a link and attach a handler
+            // that opens the URL in the system browser.
+            if url.trim().is_empty() {
+                div()
+                    .text_color(TEXT_COLOR)
+                    .child(link_text)
+                    .into_any_element()
+            } else {
+                // clickable
+                let click_url = url.clone();
+                div()
+                    .text_color(LINK_COLOR)
+                    .underline()
+                    .cursor_pointer()
+                    .hover(|style| style.text_color(HOVER_LINK_COLOR))
+                    .id(SharedString::from(url.clone()))
+                    .on_mouse_down(
+                        MouseButton::Left,
+                        cx.listener(move |_, _, _, _| {
+                            debug!("Mouse down detected on link: {}", click_url);
+                            // Log and open the URL on a background thread.
+                            let url_to_open = click_url.clone();
+                            std::thread::spawn(move || match open_url(&url_to_open) {
+                                Ok(_) => {
+                                    debug!("Successfully spawned open command for {}", url_to_open)
+                                }
+                                Err(e) => error!("Failed to open URL '{}': {}", url_to_open, e),
+                            });
+                        }),
+                    )
+                    .child(link_text)
+                    .into_any_element()
+            }
         }
 
         NodeValue::Strong => div()
             .font_weight(FontWeight::BOLD)
-            .children(node.children().map(|child| render_markdown_ast(child, _cx)))
+            .children(node.children().map(|child| render_markdown_ast(child, cx)))
             .into_any_element(),
 
         NodeValue::Emph => div()
             .italic()
-            .children(node.children().map(|child| render_markdown_ast(child, _cx)))
+            .children(node.children().map(|child| render_markdown_ast(child, cx)))
             .into_any_element(),
 
         NodeValue::Strikethrough => div()
             .line_through()
-            .children(node.children().map(|child| render_markdown_ast(child, _cx)))
+            .children(node.children().map(|child| render_markdown_ast(child, cx)))
             .into_any_element(),
 
         NodeValue::BlockQuote => div()
@@ -139,7 +182,7 @@ pub fn render_markdown_ast<'a, T>(node: &'a AstNode<'a>, _cx: &mut Context<T>) -
             .border_color(BLOCKQUOTE_BORDER_COLOR)
             .pl_4()
             .italic()
-            .children(node.children().map(|child| render_markdown_ast(child, _cx)))
+            .children(node.children().map(|child| render_markdown_ast(child, cx)))
             .into_any_element(),
 
         // Table rendering
@@ -151,7 +194,7 @@ pub fn render_markdown_ast<'a, T>(node: &'a AstNode<'a>, _cx: &mut Context<T>) -
             .border_color(TABLE_BORDER_COLOR)
             .children(
                 node.children()
-                    .map(|row| render_table_row(row, &table_data.alignments, _cx)),
+                    .map(|row| render_table_row(row, &table_data.alignments, cx)),
             )
             .into_any_element(),
 
@@ -160,7 +203,7 @@ pub fn render_markdown_ast<'a, T>(node: &'a AstNode<'a>, _cx: &mut Context<T>) -
             div()
                 .flex()
                 .w_full()
-                .children(node.children().map(|child| render_markdown_ast(child, _cx)))
+                .children(node.children().map(|child| render_markdown_ast(child, cx)))
                 .into_any_element()
         }
 
@@ -168,22 +211,22 @@ pub fn render_markdown_ast<'a, T>(node: &'a AstNode<'a>, _cx: &mut Context<T>) -
             // Cells should be rendered via render_table_cell, but handle gracefully
             div()
                 .p(px(TABLE_CELL_PADDING))
-                .children(node.children().map(|child| render_markdown_ast(child, _cx)))
+                .children(node.children().map(|child| render_markdown_ast(child, cx)))
                 .into_any_element()
         }
 
         // Fallback: walk children
         _ => div()
-            .children(node.children().map(|child| render_markdown_ast(child, _cx)))
+            .children(node.children().map(|child| render_markdown_ast(child, cx)))
             .into_any_element(),
     }
 }
 
 /// Render a table row with proper alignment and header styling
-fn render_table_row<'a, T>(
+fn render_table_row<'a, T: 'static>(
     row_node: &'a AstNode<'a>,
     alignments: &[comrak::nodes::TableAlignment],
-    _cx: &mut Context<T>,
+    cx: &mut Context<T>,
 ) -> AnyElement {
     let is_header = matches!(row_node.data.borrow().value, NodeValue::TableRow(true));
 
@@ -201,17 +244,17 @@ fn render_table_row<'a, T>(
     let cells: Vec<AnyElement> = row_node
         .children()
         .enumerate()
-        .map(|(idx, cell)| render_table_cell(cell, alignments.get(idx), _cx))
+        .map(|(idx, cell)| render_table_cell(cell, alignments.get(idx), cx))
         .collect();
 
     row_div.children(cells).into_any_element()
 }
 
 /// Render a table cell with alignment
-fn render_table_cell<'a, T>(
+fn render_table_cell<'a, T: 'static>(
     cell_node: &'a AstNode<'a>,
     alignment: Option<&comrak::nodes::TableAlignment>,
-    _cx: &mut Context<T>,
+    cx: &mut Context<T>,
 ) -> AnyElement {
     use comrak::nodes::TableAlignment;
 
@@ -233,7 +276,38 @@ fn render_table_cell<'a, T>(
         .children(
             cell_node
                 .children()
-                .map(|child| render_markdown_ast(child, _cx)),
+                .map(|child| render_markdown_ast(child, cx)),
         )
         .into_any_element()
+}
+
+/// Open a URL in the default browser
+///
+/// Uses platform-specific commands to open URLs in the system's default browser.
+///
+/// # Arguments
+/// * `url` - The URL to open
+///
+/// # Returns
+/// * `Ok(())` if the command was spawned successfully
+/// * `Err` if spawning the command failed
+fn open_url(url: &str) -> Result<(), Box<dyn std::error::Error>> {
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open").arg(url).spawn()?;
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        std::process::Command::new("xdg-open").arg(url).spawn()?;
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        std::process::Command::new("cmd")
+            .args(&["/C", "start", "", url])
+            .spawn()?;
+    }
+
+    Ok(())
 }

@@ -41,9 +41,16 @@ pub const BLOCKQUOTE_BORDER_COLOR: Rgba = Rgba {
 };
 
 pub const LINK_COLOR: Rgba = Rgba {
-    r: 0.173,
-    g: 0.627,
-    b: 0.627,
+    r: 0.05,
+    g: 0.1,
+    b: 0.35,
+    a: 1.0,
+};
+
+pub const HOVER_LINK_COLOR: Rgba = Rgba {
+    r: 0.1,
+    g: 0.2,
+    b: 0.5,
     a: 1.0,
 };
 

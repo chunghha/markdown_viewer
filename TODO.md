@@ -43,8 +43,8 @@ The core infrastructure has been **fully implemented and tested**. The applicati
   - [ ] Line numbers for code blocks
   - [ ] Copy-to-clipboard functionality
 
-- [ ] **Links and Images**
-  - [ ] Clickable links (open in browser)
+- [x] **Links and Images**
+  - [x] Clickable links (open in browser)
   - [ ] Inline image display
   - [ ] Image scaling and positioning
 
