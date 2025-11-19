@@ -139,8 +139,9 @@ fn main() -> Result<()> {
     let args = Args::parse();
 
     // Resolve the file path using our new function
-    let file_path = resolve_markdown_file_path(args.file.as_deref())
-        .context("Failed to resolve markdown file path")?;
+    let file_path =
+        resolve_markdown_file_path(args.file.as_deref(), &config.files.supported_extensions)
+            .context("Failed to resolve markdown file path")?;
 
     // Load the markdown content
     let markdown_input =

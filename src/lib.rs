@@ -413,24 +413,57 @@ pub fn render_markdown_ast<'a, T>(node: &'a AstNode<'a>, _cx: &mut Context<T>) -
 
 // ---- File Handling ---------------------------------------------------------
 
+/// Check if a file has a supported extension
+///
+/// # Arguments
+/// * `file_path` - Path to the file
+/// * `supported_extensions` - List of supported extensions (without dots)
+///
+/// # Returns
+/// * `true` if the file has a supported extension, `false` otherwise
+pub fn is_supported_extension(file_path: &str, supported_extensions: &[String]) -> bool {
+    Path::new(file_path)
+        .extension()
+        .and_then(|ext| ext.to_str())
+        .map(|ext| {
+            supported_extensions
+                .iter()
+                .any(|supported| supported.eq_ignore_ascii_case(ext))
+        })
+        .unwrap_or(false)
+}
+
 /// Resolves the markdown file path based on CLI argument or default
 ///
 /// # Arguments
 /// * `file_path` - Optional file path from CLI arguments
+/// * `supported_extensions` - List of supported file extensions (without dots)
 ///
 /// # Returns
 /// * `Ok(String)` - The resolved file path
 /// * `Err` - Error if file resolution fails
-pub fn resolve_markdown_file_path(file_path: Option<&str>) -> Result<String> {
+pub fn resolve_markdown_file_path(
+    file_path: Option<&str>,
+    supported_extensions: &[String],
+) -> Result<String> {
     match file_path {
         Some(path) => {
             debug!("Resolving file path: {}", path);
-            if Path::new(path).exists() {
-                info!("File found: {}", path);
-                Ok(path.to_string())
-            } else {
+            if !Path::new(path).exists() {
                 anyhow::bail!("File not found: {}", path);
             }
+
+            if !is_supported_extension(path, supported_extensions) {
+                let supported_list = supported_extensions.join(", ");
+                anyhow::bail!(
+                    "Unsupported file format. File '{}' does not have a supported extension.\nSupported formats: {}",
+                    path,
+                    supported_list
+                );
+            }
+
+            info!("File found: {}", path);
+            Ok(path.to_string())
         }
         None => {
             debug!("No file specified, trying default files");
@@ -588,12 +621,95 @@ mod tests {
     }
 
     #[test]
+    fn is_supported_extension_with_md() {
+        let supported = vec!["md".to_string(), "markdown".to_string(), "txt".to_string()];
+        assert!(is_supported_extension("file.md", &supported));
+    }
+
+    #[test]
+    fn is_supported_extension_with_markdown() {
+        let supported = vec!["md".to_string(), "markdown".to_string(), "txt".to_string()];
+        assert!(is_supported_extension("file.markdown", &supported));
+    }
+
+    #[test]
+    fn is_supported_extension_with_txt() {
+        let supported = vec!["md".to_string(), "markdown".to_string(), "txt".to_string()];
+        assert!(is_supported_extension("notes.txt", &supported));
+    }
+
+    #[test]
+    fn is_supported_extension_case_insensitive() {
+        let supported = vec!["md".to_string(), "markdown".to_string()];
+        assert!(is_supported_extension("file.MD", &supported));
+        assert!(is_supported_extension("file.Md", &supported));
+        assert!(is_supported_extension("file.MARKDOWN", &supported));
+    }
+
+    #[test]
+    fn is_supported_extension_with_unsupported() {
+        let supported = vec!["md".to_string(), "markdown".to_string(), "txt".to_string()];
+        assert!(!is_supported_extension("file.pdf", &supported));
+        assert!(!is_supported_extension("file.docx", &supported));
+        assert!(!is_supported_extension("file", &supported)); // No extension
+    }
+
+    #[test]
+    fn resolve_with_unsupported_extension() {
+        let supported = vec!["md".to_string(), "markdown".to_string(), "txt".to_string()];
+
+        // Create a file with unsupported extension
+        std::fs::write("test.pdf", "content").expect("Failed to create test file");
+
+        let result = crate::resolve_markdown_file_path(Some("test.pdf"), &supported);
+        assert!(result.is_err());
+        let err_msg = result.unwrap_err().to_string();
+        assert!(err_msg.contains("Unsupported file format"));
+        assert!(err_msg.contains("md, markdown, txt"));
+
+        // Clean up
+        std::fs::remove_file("test.pdf").ok();
+    }
+
+    #[test]
+    fn resolve_with_markdown_extension() {
+        let supported = vec!["md".to_string(), "markdown".to_string(), "txt".to_string()];
+
+        // Create a .markdown file
+        std::fs::write("test.markdown", "# Test").expect("Failed to create test file");
+
+        let result = crate::resolve_markdown_file_path(Some("test.markdown"), &supported);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "test.markdown");
+
+        // Clean up
+        std::fs::remove_file("test.markdown").ok();
+    }
+
+    #[test]
+    fn resolve_with_txt_extension() {
+        let supported = vec!["md".to_string(), "markdown".to_string(), "txt".to_string()];
+
+        // Create a .txt file
+        std::fs::write("notes.txt", "# Notes").expect("Failed to create test file");
+
+        let result = crate::resolve_markdown_file_path(Some("notes.txt"), &supported);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "notes.txt");
+
+        // Clean up
+        std::fs::remove_file("notes.txt").ok();
+    }
+
+    #[test]
     fn resolve_markdown_file_path_with_valid_file() {
+        let supported = vec!["md".to_string(), "markdown".to_string(), "txt".to_string()];
+
         // Create a temporary file for testing
         let test_content = "# Test\nThis is a test file.";
         std::fs::write("test_file.md", test_content).expect("Failed to create test file");
 
-        let result = crate::resolve_markdown_file_path(Some("test_file.md"));
+        let result = crate::resolve_markdown_file_path(Some("test_file.md"), &supported);
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), "test_file.md");
 
@@ -603,7 +719,8 @@ mod tests {
 
     #[test]
     fn resolve_markdown_file_path_with_nonexistent_file() {
-        let result = crate::resolve_markdown_file_path(Some("nonexistent_file.md"));
+        let supported = vec!["md".to_string(), "markdown".to_string(), "txt".to_string()];
+        let result = crate::resolve_markdown_file_path(Some("nonexistent_file.md"), &supported);
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("File not found"));
     }
@@ -623,7 +740,8 @@ mod tests {
         let todo_content = "# TODO\nSome todo items.";
         std::fs::write("TODO.md", todo_content).expect("Failed to create test TODO");
 
-        let result = crate::resolve_markdown_file_path(None);
+        let supported = vec!["md".to_string(), "markdown".to_string(), "txt".to_string()];
+        let result = crate::resolve_markdown_file_path(None, &supported);
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), "README.md");
 
@@ -654,7 +772,8 @@ mod tests {
         let todo_content = "# TODO\nSome todo items.";
         std::fs::write("TODO.md", todo_content).expect("Failed to create test TODO");
 
-        let result = crate::resolve_markdown_file_path(None);
+        let supported = vec!["md".to_string(), "markdown".to_string(), "txt".to_string()];
+        let result = crate::resolve_markdown_file_path(None, &supported);
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), "TODO.md");
 
@@ -681,7 +800,8 @@ mod tests {
         std::fs::remove_file("README.md").ok();
         std::fs::remove_file("TODO.md").ok();
 
-        let result = crate::resolve_markdown_file_path(None);
+        let supported = vec!["md".to_string(), "markdown".to_string(), "txt".to_string()];
+        let result = crate::resolve_markdown_file_path(None, &supported);
         assert!(result.is_err());
         assert!(
             result

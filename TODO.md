@@ -22,7 +22,7 @@ The core infrastructure has been **fully implemented and tested**. The applicati
 ### Phase 1: File Loading Enhancement (Medium Priority)
 - [x] **Command Line Arguments**
   - [x] Accept file path as CLI argument
-  - [ ] Support multiple file formats (.md, .markdown, .txt)
+  - [x] Support multiple file formats (.md, .markdown, .txt)
   - [x] Add file validation and error handling
   - [x] Default to README.md if no argument provided
   - [x] Professional error messages with context

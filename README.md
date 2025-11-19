@@ -62,7 +62,11 @@ cargo run
 
 # Run with a specific Markdown file
 cargo run -- README.md
+cargo run -- document.markdown
+cargo run -- notes.txt
 cargo run -- path/to/your/file.md
+
+# Supported formats: .md, .markdown, .txt
 
 # Show help and usage information
 cargo run -- --help
@@ -187,7 +191,7 @@ cargo fmt
 - **Responsive**: 60 FPS scrolling with large documents
 
 ### Code Quality
-- **31 Unit Tests**: Comprehensive test coverage for scrolling, file handling, and configuration
+- **39 Unit Tests**: Comprehensive test coverage for scrolling, file handling, configuration, and format validation
 - **Clippy Clean**: Passes all Rust linting checks
 - **Well Documented**: Inline documentation and implementation guides
 
