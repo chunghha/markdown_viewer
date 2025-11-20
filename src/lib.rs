@@ -8,11 +8,17 @@ mod internal;
 
 // Re-export public types and functions
 pub use internal::file_handling::{
-    is_supported_extension, load_markdown_content, resolve_markdown_file_path,
+    is_supported_extension, load_markdown_content, resolve_image_path, resolve_markdown_file_path,
 };
-pub use internal::rendering::render_markdown_ast;
+pub use internal::rendering::{render_markdown_ast, render_markdown_ast_with_loader};
 pub use internal::scroll::ScrollState;
 pub use internal::style::*;
+
+// Re-export internal helpers that are useful to binary targets (controlled exposure)
+pub use internal::image::{rasterize_svg_to_dynamic_image, rgba_to_bgra};
+// Expose high-level image loading helper so binary targets can call it
+// without reaching into private `internal` modules.
+pub use internal::image_loader::fetch_and_decode_image;
 
 #[cfg(test)]
 mod tests {
@@ -406,5 +412,68 @@ mod tests {
 
         assert!(has_header, "Table should have header row");
         assert!(has_body, "Table should have body row");
+    }
+
+    // ---- Image Path Resolution Tests ---------------------------------------
+
+    #[test]
+    fn resolve_image_path_with_url() {
+        use std::path::Path;
+        let result = resolve_image_path(
+            "https://example.com/image.png",
+            Path::new("/docs/README.md"),
+        );
+        assert_eq!(result, "https://example.com/image.png");
+    }
+
+    #[test]
+    fn resolve_image_path_with_http_url() {
+        use std::path::Path;
+        let result =
+            resolve_image_path("http://example.com/photo.jpg", Path::new("/docs/README.md"));
+        assert_eq!(result, "http://example.com/photo.jpg");
+    }
+
+    #[test]
+    fn resolve_image_path_with_absolute_path() {
+        use std::path::Path;
+        let result = resolve_image_path("/assets/icon.png", Path::new("/docs/README.md"));
+        assert_eq!(result, "/assets/icon.png");
+    }
+
+    #[test]
+    fn resolve_image_path_with_relative_path() {
+        use std::path::Path;
+        let result = resolve_image_path("./images/logo.png", Path::new("/docs/README.md"));
+        // On Unix-like systems
+        #[cfg(unix)]
+        assert_eq!(result, "/docs/images/logo.png");
+    }
+
+    #[test]
+    fn resolve_image_path_with_parent_relative_path() {
+        use std::path::Path;
+        let result = resolve_image_path("../assets/icon.png", Path::new("/docs/sub/README.md"));
+        // On Unix-like systems
+        #[cfg(unix)]
+        assert_eq!(result, "/docs/assets/icon.png");
+    }
+
+    #[test]
+    fn resolve_image_path_with_nested_relative_path() {
+        use std::path::Path;
+        let result = resolve_image_path("images/icons/logo.png", Path::new("/docs/README.md"));
+        // On Unix-like systems
+        #[cfg(unix)]
+        assert_eq!(result, "/docs/images/icons/logo.png");
+    }
+
+    #[test]
+    fn resolve_image_path_with_no_parent_directory() {
+        use std::path::Path;
+        // Path with no parent (e.g., root or relative path without parent)
+        let result = resolve_image_path("image.png", Path::new("README.md"));
+        // Should return the image path as-is when no parent can be determined
+        assert_eq!(result, "image.png");
     }
 }

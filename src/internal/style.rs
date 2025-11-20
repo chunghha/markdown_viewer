@@ -75,6 +75,14 @@ pub const HOVER_LINK_COLOR: Rgba = Rgba {
     a: 1.0,
 };
 
+// ---- Image Styling ---------------------------------------------------------
+
+/// Maximum width for inline images to prevent overflow
+pub const IMAGE_MAX_WIDTH: f32 = 800.0;
+
+/// Default image border radius
+pub const IMAGE_BORDER_RADIUS: f32 = 4.0;
+
 // ---- Table Styling ---------------------------------------------------------
 
 pub const TABLE_BORDER_COLOR: Rgba = Rgba {

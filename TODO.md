@@ -45,8 +45,8 @@ The core infrastructure has been **fully implemented and tested**. The applicati
 
 - [x] **Links and Images**
   - [x] Clickable links (open in browser)
-  - [ ] Inline image display
-  - [ ] Image scaling and positioning
+  - [x] Inline image display
+  - [x] Image scaling and positioning
 
 ### Phase 3: User Experience Improvements (Medium Priority)
 - [ ] **Search Functionality**

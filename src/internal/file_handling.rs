@@ -99,3 +99,78 @@ pub fn load_markdown_content(file_path: &str) -> Result<String> {
     );
     Ok(content)
 }
+
+/// Resolves an image path relative to the markdown file
+///
+/// # Arguments
+/// * `image_path` - The image path from the markdown (URL, absolute, or relative)
+/// * `markdown_file_path` - Path to the markdown file being rendered
+///
+/// # Returns
+/// * Resolved image path as a String
+///
+/// # Path Resolution Strategy
+/// 1. HTTP/HTTPS URLs: Return as-is
+/// 2. Absolute paths: Return as-is
+/// 3. Relative paths: Resolve relative to markdown file's directory
+pub fn resolve_image_path(image_path: &str, markdown_file_path: &Path) -> String {
+    // If URL, return as-is
+    if image_path.starts_with("http://") || image_path.starts_with("https://") {
+        debug!("Image is a URL: {}", image_path);
+        return image_path.to_string();
+    }
+
+    // If absolute path, return as-is
+    let image_path_obj = Path::new(image_path);
+    if image_path_obj.is_absolute() {
+        debug!("Image is absolute path: {}", image_path);
+        return image_path.to_string();
+    }
+
+    // Resolve relative path
+    if let Some(parent) = markdown_file_path.parent() {
+        let resolved = parent.join(image_path);
+        // Normalize the path to remove . and .. components
+        let normalized = normalize_path(&resolved);
+        let resolved_str = normalized.to_string_lossy().to_string();
+        debug!(
+            "Resolved relative image path '{}' to '{}'",
+            image_path, resolved_str
+        );
+        resolved_str
+    } else {
+        debug!(
+            "Could not resolve parent directory for '{}', using as-is",
+            image_path
+        );
+        image_path.to_string()
+    }
+}
+
+/// Normalize a path by removing `.` and `..` components
+///
+/// This is a simplified path normalization that doesn't require file system access.
+/// It handles common cases like `./foo` and `../bar` but doesn't handle symlinks.
+fn normalize_path(path: &Path) -> std::path::PathBuf {
+    let mut components = Vec::new();
+
+    for component in path.components() {
+        match component {
+            std::path::Component::CurDir => {
+                // Skip "." components
+            }
+            std::path::Component::ParentDir => {
+                // Pop the last component for ".."
+                if !components.is_empty() {
+                    components.pop();
+                }
+            }
+            _ => {
+                // Keep all other components
+                components.push(component);
+            }
+        }
+    }
+
+    components.iter().collect()
+}

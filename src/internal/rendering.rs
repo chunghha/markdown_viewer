@@ -6,9 +6,10 @@
 use super::style::*;
 use comrak::nodes::{AstNode, NodeValue};
 use gpui::{
-    AnyElement, ClipboardItem, Context, FontWeight, InteractiveElement, IntoElement, MouseButton,
-    Rgba, SharedString, div, prelude::*, px,
+    AnyElement, ClipboardItem, Context, FontWeight, ImageSource, InteractiveElement, IntoElement,
+    MouseButton, Rgba, SharedString, div, img, prelude::*, px,
 };
+use std::path::Path;
 use std::sync::OnceLock;
 use syntect::easy::HighlightLines;
 use syntect::highlighting::ThemeSet;
@@ -144,15 +145,21 @@ fn collect_text<'a>(node: &'a AstNode<'a>) -> String {
     out
 }
 
-/// Render a Markdown AST node to a GPUI element
-pub fn render_markdown_ast<'a, T: 'static>(
+/// Render a Markdown AST node to a GPUI element with context
+///
+/// This internal function accepts an optional markdown file path for resolving relative image paths.
+fn render_markdown_ast_internal<'a, T: 'static>(
     node: &'a AstNode<'a>,
+    markdown_file_path: Option<&Path>,
     cx: &mut Context<T>,
+    image_loader: &mut dyn FnMut(&str) -> Option<ImageSource>,
 ) -> AnyElement {
     match &node.data.borrow().value {
         NodeValue::Document => div()
             .flex_col()
-            .children(node.children().map(|child| render_markdown_ast(child, cx)))
+            .children(node.children().map(|child| {
+                render_markdown_ast_internal(child, markdown_file_path, cx, image_loader)
+            }))
             .into_any_element(),
 
         NodeValue::Paragraph => {
@@ -165,8 +172,10 @@ pub fn render_markdown_ast<'a, T: 'static>(
             if !is_in_list_item {
                 p = p.mb_2();
             }
-            p.children(node.children().map(|child| render_markdown_ast(child, cx)))
-                .into_any_element()
+            p.children(node.children().map(|child| {
+                render_markdown_ast_internal(child, markdown_file_path, cx, image_loader)
+            }))
+            .into_any_element()
         }
 
         NodeValue::Heading(heading) => {
@@ -187,7 +196,9 @@ pub fn render_markdown_ast<'a, T: 'static>(
                     .text_size(text_size)
                     .font_weight(FontWeight::SEMIBOLD)
                     .mt(px((heading.level == 1) as u8 as f32 * 4.0))
-                    .children(node.children().map(|child| render_markdown_ast(child, cx)))
+                    .children(node.children().map(|child| {
+                        render_markdown_ast_internal(child, markdown_file_path, cx, image_loader)
+                    }))
                     .into_any_element()
             }
         }
@@ -218,9 +229,9 @@ pub fn render_markdown_ast<'a, T: 'static>(
                     comrak::nodes::ListType::Bullet => "•".to_string(),
                     comrak::nodes::ListType::Ordered => format!("{}.", items.len() + 1),
                 };
-                let content = div()
-                    .w_full()
-                    .children(item.children().map(|child| render_markdown_ast(child, cx)));
+                let content = div().w_full().children(item.children().map(|child| {
+                    render_markdown_ast_internal(child, markdown_file_path, cx, image_loader)
+                }));
                 items.push(
                     div()
                         .flex()
@@ -231,6 +242,92 @@ pub fn render_markdown_ast<'a, T: 'static>(
                 );
             }
             div().flex_col().pl_4().children(items).into_any_element()
+        }
+
+        NodeValue::Image(link) => {
+            use super::file_handling::resolve_image_path;
+
+            let image_url = link.url.clone();
+            let alt_text = collect_text(node);
+
+            debug!("Rendering image '{}' -> '{}'", alt_text, image_url);
+
+            // Resolve image path
+            let resolved_path = if let Some(md_path) = markdown_file_path {
+                resolve_image_path(&image_url, md_path)
+            } else {
+                image_url.to_string()
+            };
+
+            debug!("Resolved image path: {}", resolved_path);
+
+            if let Some(source) = image_loader(&resolved_path) {
+                div()
+                    .w_full()
+                    .flex()
+                    .justify_center()
+                    .my_2()
+                    .child(
+                        img(source)
+                            .w(px(IMAGE_MAX_WIDTH))
+                            .object_fit(gpui::ObjectFit::Contain)
+                            .rounded(px(IMAGE_BORDER_RADIUS)),
+                    )
+                    .into_any_element()
+            } else {
+                // Show placeholder
+                div()
+                    .w_full()
+                    .flex()
+                    .flex_col()
+                    .items_center()
+                    .my_2()
+                    .p_4()
+                    .bg(Rgba {
+                        r: 0.95,
+                        g: 0.95,
+                        b: 0.95,
+                        a: 1.0,
+                    })
+                    .border_1()
+                    .border_color(Rgba {
+                        r: 0.8,
+                        g: 0.8,
+                        b: 0.8,
+                        a: 1.0,
+                    })
+                    .rounded(px(IMAGE_BORDER_RADIUS))
+                    .child(
+                        div()
+                            .text_color(Rgba {
+                                r: 0.4,
+                                g: 0.4,
+                                b: 0.4,
+                                a: 1.0,
+                            })
+                            .font_weight(FontWeight::BOLD)
+                            .mb_2()
+                            .child("🖼️ Image"),
+                    )
+                    .child(div().text_color(TEXT_COLOR).child(if !alt_text.is_empty() {
+                        alt_text
+                    } else {
+                        "Image".to_string()
+                    }))
+                    .child(
+                        div()
+                            .text_size(px(12.0))
+                            .text_color(Rgba {
+                                r: 0.5,
+                                g: 0.5,
+                                b: 0.5,
+                                a: 1.0,
+                            })
+                            .mt_1()
+                            .child(resolved_path),
+                    )
+                    .into_any_element()
+            }
         }
 
         NodeValue::Link(link) => {
@@ -278,17 +375,23 @@ pub fn render_markdown_ast<'a, T: 'static>(
 
         NodeValue::Strong => div()
             .font_weight(FontWeight::BOLD)
-            .children(node.children().map(|child| render_markdown_ast(child, cx)))
+            .children(node.children().map(|child| {
+                render_markdown_ast_internal(child, markdown_file_path, cx, image_loader)
+            }))
             .into_any_element(),
 
         NodeValue::Emph => div()
             .italic()
-            .children(node.children().map(|child| render_markdown_ast(child, cx)))
+            .children(node.children().map(|child| {
+                render_markdown_ast_internal(child, markdown_file_path, cx, image_loader)
+            }))
             .into_any_element(),
 
         NodeValue::Strikethrough => div()
             .line_through()
-            .children(node.children().map(|child| render_markdown_ast(child, cx)))
+            .children(node.children().map(|child| {
+                render_markdown_ast_internal(child, markdown_file_path, cx, image_loader)
+            }))
             .into_any_element(),
 
         NodeValue::BlockQuote => div()
@@ -296,7 +399,9 @@ pub fn render_markdown_ast<'a, T: 'static>(
             .border_color(BLOCKQUOTE_BORDER_COLOR)
             .pl_4()
             .italic()
-            .children(node.children().map(|child| render_markdown_ast(child, cx)))
+            .children(node.children().map(|child| {
+                render_markdown_ast_internal(child, markdown_file_path, cx, image_loader)
+            }))
             .into_any_element(),
 
         // Table rendering
@@ -306,10 +411,15 @@ pub fn render_markdown_ast<'a, T: 'static>(
             .my_2()
             .border_1()
             .border_color(TABLE_BORDER_COLOR)
-            .children(
-                node.children()
-                    .map(|row| render_table_row(row, &table_data.alignments, cx)),
-            )
+            .children(node.children().map(|row| {
+                render_table_row(
+                    row,
+                    &table_data.alignments,
+                    markdown_file_path,
+                    cx,
+                    image_loader,
+                )
+            }))
             .into_any_element(),
 
         NodeValue::TableRow(_) => {
@@ -317,7 +427,9 @@ pub fn render_markdown_ast<'a, T: 'static>(
             div()
                 .flex()
                 .w_full()
-                .children(node.children().map(|child| render_markdown_ast(child, cx)))
+                .children(node.children().map(|child| {
+                    render_markdown_ast_internal(child, markdown_file_path, cx, image_loader)
+                }))
                 .into_any_element()
         }
 
@@ -325,22 +437,51 @@ pub fn render_markdown_ast<'a, T: 'static>(
             // Cells should be rendered via render_table_cell, but handle gracefully
             div()
                 .p(px(TABLE_CELL_PADDING))
-                .children(node.children().map(|child| render_markdown_ast(child, cx)))
+                .children(node.children().map(|child| {
+                    render_markdown_ast_internal(child, markdown_file_path, cx, image_loader)
+                }))
                 .into_any_element()
         }
 
         // Fallback: walk children
         _ => div()
-            .children(node.children().map(|child| render_markdown_ast(child, cx)))
+            .children(node.children().map(|child| {
+                render_markdown_ast_internal(child, markdown_file_path, cx, image_loader)
+            }))
             .into_any_element(),
     }
+}
+
+/// Render a Markdown AST node to a GPUI element
+///
+/// This is the public API that maintains backward compatibility.
+/// For image support with relative paths, use `render_markdown_ast_with_path` instead.
+pub fn render_markdown_ast<'a, T: 'static>(
+    node: &'a AstNode<'a>,
+    cx: &mut Context<T>,
+) -> AnyElement {
+    render_markdown_ast_internal(node, None, cx, &mut |_| None)
+}
+
+/// Render a Markdown AST node to a GPUI element with markdown file path context
+///
+/// This version accepts the markdown file path to enable proper resolution of relative image paths.
+pub fn render_markdown_ast_with_loader<'a, T: 'static>(
+    node: &'a AstNode<'a>,
+    markdown_file_path: Option<&Path>,
+    cx: &mut Context<T>,
+    image_loader: &mut dyn FnMut(&str) -> Option<ImageSource>,
+) -> AnyElement {
+    render_markdown_ast_internal(node, markdown_file_path, cx, image_loader)
 }
 
 /// Render a table row with proper alignment and header styling
 fn render_table_row<'a, T: 'static>(
     row_node: &'a AstNode<'a>,
     alignments: &[comrak::nodes::TableAlignment],
+    markdown_file_path: Option<&Path>,
     cx: &mut Context<T>,
+    image_loader: &mut dyn FnMut(&str) -> Option<ImageSource>,
 ) -> AnyElement {
     let is_header = matches!(row_node.data.borrow().value, NodeValue::TableRow(true));
 
@@ -358,7 +499,15 @@ fn render_table_row<'a, T: 'static>(
     let cells: Vec<AnyElement> = row_node
         .children()
         .enumerate()
-        .map(|(idx, cell)| render_table_cell(cell, alignments.get(idx), cx))
+        .map(|(idx, cell)| {
+            render_table_cell(
+                cell,
+                alignments.get(idx),
+                markdown_file_path,
+                cx,
+                image_loader,
+            )
+        })
         .collect();
 
     row_div.children(cells).into_any_element()
@@ -368,7 +517,9 @@ fn render_table_row<'a, T: 'static>(
 fn render_table_cell<'a, T: 'static>(
     cell_node: &'a AstNode<'a>,
     alignment: Option<&comrak::nodes::TableAlignment>,
+    markdown_file_path: Option<&Path>,
     cx: &mut Context<T>,
+    image_loader: &mut dyn FnMut(&str) -> Option<ImageSource>,
 ) -> AnyElement {
     use comrak::nodes::TableAlignment;
 
@@ -388,9 +539,9 @@ fn render_table_cell<'a, T: 'static>(
 
     cell_div
         .children(
-            cell_node
-                .children()
-                .map(|child| render_markdown_ast(child, cx)),
+            cell_node.children().map(|child| {
+                render_markdown_ast_internal(child, markdown_file_path, cx, image_loader)
+            }),
         )
         .into_any_element()
 }

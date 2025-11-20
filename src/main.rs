@@ -2,18 +2,34 @@ use anyhow::{Context, Result};
 use clap::Parser;
 use comrak::{Arena, Options, parse_document};
 use gpui::{
-    App, Application, Context as GpuiContext, IntoElement, KeyDownEvent, Render, ScrollWheelEvent,
-    Window, WindowOptions, div, prelude::*, px,
+    App, Application, AsyncWindowContext, Context as GpuiContext, ImageSource, IntoElement,
+    KeyDownEvent, Render, RenderImage, ScrollWheelEvent, WeakEntity, Window, WindowOptions, div,
+    prelude::*, px,
 };
+use markdown_viewer::fetch_and_decode_image;
 use markdown_viewer::{
-    BG_COLOR, ScrollState, TEXT_COLOR, config::AppConfig, load_markdown_content,
-    render_markdown_ast, resolve_markdown_file_path,
+    BG_COLOR, IMAGE_MAX_WIDTH, ScrollState, TEXT_COLOR, config::AppConfig, load_markdown_content,
+    render_markdown_ast_with_loader, resolve_markdown_file_path,
 };
+use std::collections::{HashMap, HashSet};
+use std::path::PathBuf;
+use std::sync::Arc;
+use tokio::runtime::Runtime;
 use tracing::{debug, info, warn};
+
+/// Estimated vertical spacing (margins + padding) applied around images in the renderer.
+/// Tunable constant to better match gpui layout spacing. Reduced from earlier 24.0 to 16.0.
+const IMAGE_VERTICAL_PADDING: f32 = 16.0;
+
+enum ImageState {
+    Loading,
+    Loaded(ImageSource),
+    Error,
+}
 
 #[derive(Parser)]
 #[command(name = "markdown_viewer")]
-#[command(about = "A simple markdown viewer with scrolling support")]
+#[command(about = "A simple markdown viewer")]
 struct Args {
     /// Path to the markdown file to view
     file: Option<String>,
@@ -21,36 +37,208 @@ struct Args {
 
 struct MarkdownViewer {
     markdown_content: String,
+    markdown_file_path: PathBuf,
     scroll_state: ScrollState,
     viewport_height: f32,
     config: AppConfig,
+    image_cache: HashMap<String, ImageState>,
+    /// Per-image displayed heights (in pixels) used to compute content height for scrolling.
+    image_display_heights: HashMap<String, f32>,
+    bg_rt: Arc<Runtime>,
 }
 
 impl MarkdownViewer {
-    // New: Method to recompute max scroll based on content and viewport
+    // New: Method to recompute max scroll based on content, viewport and loaded image heights
+    //
+    // Improved text-height estimation:
+    // - Headings lines (lines that start with '#') are heavier (larger font / spacing).
+    // - Fenced code blocks count as code lines and have a slightly larger per-line height.
+    // - Blockquotes ('>') are slightly larger.
+    // - Lists are treated similar to normal lines but could be adjusted independently.
+    // This remains a fast heuristic (no full layout pass) but reduces large under/over estimates.
     fn recompute_max_scroll(&mut self) {
-        // Better estimation based on actual line count with proper spacing
-        let line_count = self.markdown_content.lines().count();
         let avg_line_height =
             self.config.theme.base_text_size * self.config.theme.line_height_multiplier;
-        let estimated_content_height = line_count as f32 * avg_line_height;
 
-        // Add buffer for headings, lists, and spacing
-        let content_height = estimated_content_height + self.config.theme.content_height_buffer;
+        // Heuristic counts
+        let mut heading_lines: usize = 0;
+        let mut code_block_lines: usize = 0;
+        let mut blockquote_lines: usize = 0;
+        let mut list_lines: usize = 0;
+        let mut other_lines: usize = 0;
+
+        let mut in_fenced_code = false;
+
+        for raw_line in self.markdown_content.lines() {
+            let line = raw_line.trim_start();
+
+            // Toggle fenced code block state on lines starting with ```
+            if line.starts_with("```") {
+                in_fenced_code = !in_fenced_code;
+                // Count the fence line as part of code block header (small impact)
+                continue;
+            }
+
+            if in_fenced_code {
+                code_block_lines += 1;
+                continue;
+            }
+
+            if line.starts_with('#') {
+                heading_lines += 1;
+            } else if line.starts_with('>') {
+                blockquote_lines += 1;
+            } else if line.starts_with('-')
+                || line.starts_with('*')
+                || line.starts_with('+')
+                || line
+                    .chars()
+                    .next()
+                    .map(|c| c.is_ascii_digit())
+                    .unwrap_or(false)
+                    && line.contains(". ")
+            {
+                list_lines += 1;
+            } else if line.is_empty() {
+                // empty line — small spacer, count as half-line
+                // We'll fold these into other_lines with lower weight
+                other_lines += 1;
+            } else {
+                other_lines += 1;
+            }
+        }
+
+        // Weights (multipliers relative to avg_line_height)
+        let heading_weight = 1.6; // headings are larger and have extra spacing
+        let code_line_weight = 1.25; // fenced code lines take slightly more vertical space
+        let blockquote_weight = 1.15;
+        let list_line_weight = 1.0;
+        let normal_line_weight = 1.0;
+
+        let estimated_text_height = (heading_lines as f32 * avg_line_height * heading_weight)
+            + (code_block_lines as f32 * avg_line_height * code_line_weight)
+            + (blockquote_lines as f32 * avg_line_height * blockquote_weight)
+            + (list_lines as f32 * avg_line_height * list_line_weight)
+            + (other_lines as f32 * avg_line_height * normal_line_weight);
+
+        // Sum the displayed heights of all loaded images (if known),
+        // including a small per-image padding to match visual spacing.
+        let images_total_height: f32 = self
+            .image_display_heights
+            .values()
+            .copied()
+            .map(|h| h + IMAGE_VERTICAL_PADDING)
+            .sum();
+
+        // Combine text + images + buffer
+        let content_height =
+            estimated_text_height + images_total_height + self.config.theme.content_height_buffer;
 
         self.scroll_state
             .set_max_scroll(content_height, self.viewport_height);
     }
+
+    fn load_image(&mut self, path: String, window: &Window, cx: &mut GpuiContext<Self>) {
+        if self.image_cache.contains_key(&path) {
+            return;
+        }
+
+        self.image_cache.insert(path.clone(), ImageState::Loading);
+        let path_for_load = path.clone();
+        let path_for_update = path.clone();
+        let bg_rt = self.bg_rt.clone();
+
+        // Spawn a gpui background task which delegatesthe network + decode work to the dedicated Tokio runtime.
+        cx.spawn_in(
+            window,
+            move |this: WeakEntity<MarkdownViewer>, cx: &mut AsyncWindowContext| {
+                let mut cx = cx.clone();
+                let bg_rt = bg_rt.clone();
+                async move {
+                    // Spawn the network+decode job on the background runtime.
+                    // The background job returns Result<image::DynamicImage, anyhow::Error>.
+                    let join_handle = bg_rt.spawn(async move {
+                        // Delegate fetching + decoding to the centralized image_loader helper.
+                        // This keeps main UI code small and moves network/fallback logic into an internal module.
+                        fetch_and_decode_image(&path_for_load).await
+                    });
+
+                    // Await the join handle produced by the background runtime.
+                    let join_result = join_handle.await;
+
+                    // Update gpui state on the UI context thread.
+                    this.update(&mut cx, |this, cx| match join_result {
+                        Ok(Ok(dyn_img)) => {
+                            // Successfully decoded image into DynamicImage. Convert to RGBA and create RenderImage.
+                            let mut rgba = dyn_img.into_rgba8();
+
+                            // GPUI on macOS expects BGRA format, but image crate produces RGBA.
+                            // Convert RGBA -> BGRA before passing to GPUI
+                            markdown_viewer::rgba_to_bgra(&mut rgba);
+
+                            let orig_w = rgba.width() as f32;
+                            let orig_h = rgba.height() as f32;
+                            // Compute displayed width constrained by IMAGE_MAX_WIDTH (same as rendering).
+                            let displayed_w = if orig_w > IMAGE_MAX_WIDTH {
+                                IMAGE_MAX_WIDTH
+                            } else {
+                                orig_w
+                            };
+                            // Maintain aspect ratio for displayed height
+                            let displayed_h = if orig_w > 0.0 {
+                                (displayed_w / orig_w) * orig_h
+                            } else {
+                                orig_h
+                            };
+
+                            let frame = image::Frame::new(rgba);
+                            let render_image = RenderImage::new(vec![frame]);
+                            let arc_img = Arc::new(render_image);
+
+                            debug!("Successfully loaded image: {}", path_for_update);
+                            this.image_cache.insert(
+                                path_for_update.clone(),
+                                ImageState::Loaded(ImageSource::Render(arc_img.clone())),
+                            );
+                            this.image_display_heights
+                                .insert(path_for_update.clone(), displayed_h);
+                            // Recompute scroll bounds now that an image height is known
+                            this.recompute_max_scroll();
+                            cx.notify();
+                        }
+                        Ok(Err(e)) => {
+                            debug!("Failed to load image '{}': {}", path_for_update, e);
+                            this.image_cache
+                                .insert(path_for_update.clone(), ImageState::Error);
+                            this.image_display_heights.remove(&path_for_update);
+                        }
+                        Err(join_err) => {
+                            debug!(
+                                "Image task join error for '{}': {}",
+                                path_for_update, join_err
+                            );
+                            this.image_cache
+                                .insert(path_for_update.clone(), ImageState::Error);
+                            this.image_display_heights.remove(&path_for_update);
+                        }
+                    })
+                    .ok();
+                }
+            },
+        )
+        .detach();
+    }
 }
 
 impl Render for MarkdownViewer {
-    fn render(&mut self, _window: &mut Window, cx: &mut GpuiContext<Self>) -> impl IntoElement {
+    fn render(&mut self, window: &mut Window, cx: &mut GpuiContext<Self>) -> impl IntoElement {
         let arena = Arena::new();
         let mut options = Options::default();
         options.extension.table = true; // Enable GFM tables
         let root = parse_document(&arena, &self.markdown_content, &options);
 
-        div()
+        let mut missing_images = HashSet::new();
+        let element = div()
             .flex()
             .size_full()
             .bg(BG_COLOR)
@@ -110,12 +298,35 @@ impl Render for MarkdownViewer {
                     div()
                         .flex_col()
                         .w_full()
-                        .p_4()
+                        .pt_4()
+                        .pr_4()
+                        .pb_4()
+                        .pl_8()
                         .relative()
                         .top(px(-self.scroll_state.scroll_y))
-                        .child(render_markdown_ast(root, cx)),
+                        .child(render_markdown_ast_with_loader(
+                            root,
+                            Some(&self.markdown_file_path),
+                            cx,
+                            &mut |path| {
+                                if let Some(ImageState::Loaded(src)) = self.image_cache.get(path) {
+                                    Some(src.clone())
+                                } else {
+                                    if !self.image_cache.contains_key(path) {
+                                        missing_images.insert(path.to_string());
+                                    }
+                                    None
+                                }
+                            },
+                        )),
                 ),
-            )
+            );
+
+        for path in missing_images {
+            self.load_image(path, window, cx);
+        }
+
+        element
     }
 }
 
@@ -155,15 +366,30 @@ fn main() -> Result<()> {
         markdown_input.len()
     );
 
+    // Create a dedicated background Tokio runtime for async tasks (image downloads, etc.)
+    let bg_rt = Arc::new(
+        tokio::runtime::Builder::new_multi_thread()
+            .enable_all()
+            .build()
+            .context("Failed to build background Tokio runtime")?,
+    );
+
+    // Run the GUI on the main thread (required by gpui). Background async work will use `bg_rt`.
     Application::new().run(move |cx: &mut App| {
         let window_config = config.clone();
+        let file_path_buf = PathBuf::from(file_path.clone());
+        let bg_rt = bg_rt.clone();
         cx.open_window(WindowOptions::default(), move |_, cx| {
             cx.new(|_| {
                 let mut viewer = MarkdownViewer {
                     markdown_content: markdown_input.clone(),
+                    markdown_file_path: file_path_buf.clone(),
                     scroll_state: ScrollState::new(),
                     viewport_height: window_config.window.height,
                     config: window_config.clone(),
+                    image_cache: HashMap::new(),
+                    image_display_heights: HashMap::new(),
+                    bg_rt: bg_rt.clone(),
                 };
                 viewer.recompute_max_scroll(); // Calculate initial scroll bounds
                 debug!("MarkdownViewer initialized");
