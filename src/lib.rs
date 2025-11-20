@@ -23,6 +23,10 @@ pub use internal::image::{rasterize_svg_to_dynamic_image, rgba_to_bgra};
 // without reaching into private `internal` modules.
 pub use internal::image_loader::fetch_and_decode_image;
 
+// Re-export help overlay builders so binary / integration code can compose the
+// help UI without reaching into the private `internal` module tree.
+pub use internal::help_overlay::{help_panel, shortcut_row};
+
 #[cfg(test)]
 mod tests {
     use super::*;

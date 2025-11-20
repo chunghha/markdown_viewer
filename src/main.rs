@@ -56,6 +56,8 @@ struct MarkdownViewer {
     search_input: String,
     /// Focus handle for keyboard events
     focus_handle: gpui::FocusHandle,
+    /// Whether to show the help overlay
+    show_help: bool,
 }
 
 impl MarkdownViewer {
@@ -309,6 +311,9 @@ impl MarkdownViewer {
     }
 }
 
+// `shortcut_row` is provided by the library re-export (`markdown_viewer::shortcut_row`).
+// Local wrapper removed to avoid a dead-code warning.
+
 impl Render for MarkdownViewer {
     fn render(&mut self, window: &mut Window, cx: &mut GpuiContext<Self>) -> impl IntoElement {
         // Update viewport height if changed
@@ -423,7 +428,7 @@ impl Render for MarkdownViewer {
                     return;
                 }
 
-                // Handle global shortcuts (Cmd+T, Cmd+B, Cmd+Q, Cmd+=, Cmd+-)
+                // Handle global shortcuts (Cmd+T, Cmd+B, Cmd+Q, Cmd+=, Cmd+-, Cmd+H)
                 if event.keystroke.modifiers.platform {
                     match event.keystroke.key.as_str() {
                         "t" => {
@@ -463,8 +468,21 @@ impl Render for MarkdownViewer {
                             }
                             return;
                         }
+                        "h" => {
+                            debug!("Toggle help overlay (Cmd+H)");
+                            this.show_help = !this.show_help;
+                            cx.notify();
+                            return;
+                        }
                         _ => {}
                     }
+                }
+
+                // Handle Escape to close help overlay
+                if this.show_help && event.keystroke.key.as_str() == "escape" {
+                    this.show_help = false;
+                    cx.notify();
+                    return;
                 }
 
                 // Handle search mode input
@@ -572,7 +590,7 @@ impl Render for MarkdownViewer {
                         .flex_col()
                         .w_full()
                         .pt_4()
-                        .pr_4()
+                        .pr_8()
                         .pb_4()
                         .pl_8()
                         .relative()
@@ -599,7 +617,7 @@ impl Render for MarkdownViewer {
             .child(
                 div()
                     .absolute()
-                    .bottom_4()
+                    .bottom_3()
                     .right_4()
                     .bg(VERSION_BADGE_BG_COLOR)
                     .text_color(VERSION_BADGE_TEXT_COLOR)
@@ -647,6 +665,33 @@ impl Render for MarkdownViewer {
                     .py_2()
                     .text_size(px(14.0))
                     .child(match_info),
+            )
+        } else {
+            element
+        };
+
+        // Help Overlay
+        let element = if self.show_help {
+            // Use the centralized help overlay builder in the internal module.
+            element.child(
+                div()
+                    .absolute()
+                    .top_0()
+                    .left_0()
+                    .right_0()
+                    .bottom_0()
+                    .bg(gpui::Rgba {
+                        r: 0.0,
+                        g: 0.0,
+                        b: 0.0,
+                        a: 0.8,
+                    })
+                    .flex()
+                    .items_center()
+                    .justify_center()
+                    // Delegate the inner panel construction to the public helper so
+                    // main.rs stays focused on composition rather than layout details.
+                    .child(markdown_viewer::help_panel()),
             )
         } else {
             element
@@ -726,6 +771,7 @@ fn main() -> Result<()> {
                         search_state: None,
                         search_input: String::new(),
                         focus_handle,
+                        show_help: false,
                     };
                     viewer.recompute_max_scroll(); // Calculate initial scroll bounds
                     debug!("MarkdownViewer initialized");

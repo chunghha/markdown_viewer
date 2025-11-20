@@ -3317,7 +3317,7 @@ dependencies = [
 
 [[package]]
 name = "markdown_viewer"
-version = "0.6.3"
+version = "0.6.4"
 dependencies = [
  "anyhow",
  "clap",

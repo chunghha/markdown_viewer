@@ -6,6 +6,7 @@
 //! are re-exported through the main lib.rs as needed.
 
 pub mod file_handling;
+pub mod help_overlay;
 pub mod image;
 pub mod image_loader;
 pub mod rendering;
