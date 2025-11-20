@@ -127,7 +127,7 @@ impl Default for ThemeConfig {
             code_font: "monospace".to_string(),
             base_text_size: 19.2,
             line_height_multiplier: 1.5,
-            content_height_buffer: 400.0,
+            content_height_buffer: 200.0,
         }
     }
 }
@@ -268,7 +268,7 @@ mod tests {
         assert_eq!(config.code_font, "monospace");
         assert_eq!(config.base_text_size, 19.2);
         assert_eq!(config.line_height_multiplier, 1.5);
-        assert_eq!(config.content_height_buffer, 400.0);
+        assert_eq!(config.content_height_buffer, 200.0);
     }
 
     #[test]

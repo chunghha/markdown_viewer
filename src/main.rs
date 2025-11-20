@@ -143,6 +143,7 @@ impl MarkdownViewer {
         let mut code_block_lines: usize = 0;
         let mut blockquote_lines: usize = 0;
         let mut list_lines: usize = 0;
+        let mut empty_lines: usize = 0;
         let mut other_lines: usize = 0;
 
         let mut in_fenced_code = false;
@@ -178,9 +179,7 @@ impl MarkdownViewer {
             {
                 list_lines += 1;
             } else if line.is_empty() {
-                // empty line — small spacer, count as half-line
-                // We'll fold these into other_lines with lower weight
-                other_lines += 1;
+                empty_lines += 1;
             } else {
                 other_lines += 1;
             }
@@ -191,12 +190,14 @@ impl MarkdownViewer {
         let code_line_weight = 1.25; // fenced code lines take slightly more vertical space
         let blockquote_weight = 1.15;
         let list_line_weight = 1.0;
+        let empty_line_weight = 0.25; // Empty lines are usually just small gaps
         let normal_line_weight = 1.0;
 
         let estimated_text_height = (heading_lines as f32 * avg_line_height * heading_weight)
             + (code_block_lines as f32 * avg_line_height * code_line_weight)
             + (blockquote_lines as f32 * avg_line_height * blockquote_weight)
             + (list_lines as f32 * avg_line_height * list_line_weight)
+            + (empty_lines as f32 * avg_line_height * empty_line_weight)
             + (other_lines as f32 * avg_line_height * normal_line_weight);
 
         // Sum the displayed heights of all loaded images (if known),
@@ -310,6 +311,15 @@ impl MarkdownViewer {
 
 impl Render for MarkdownViewer {
     fn render(&mut self, window: &mut Window, cx: &mut GpuiContext<Self>) -> impl IntoElement {
+        // Update viewport height if changed
+        let current_height = window.viewport_size().height;
+        let current_height_f32 = f32::from(current_height);
+
+        if (current_height_f32 - self.viewport_height).abs() > 1.0 {
+            self.viewport_height = current_height_f32;
+            self.recompute_max_scroll();
+        }
+
         let arena = Arena::new();
         let mut options = Options::default();
         options.extension.table = true; // Enable GFM tables
@@ -410,6 +420,30 @@ impl Render for MarkdownViewer {
                     }
                     cx.notify();
                     return;
+                }
+
+                // Handle global shortcuts (Cmd+T, Cmd+B, Cmd+Q)
+                if event.keystroke.modifiers.platform {
+                    match event.keystroke.key.as_str() {
+                        "t" => {
+                            debug!("Scroll to top (Cmd+T)");
+                            this.scroll_state.scroll_to_top();
+                            cx.notify();
+                            return;
+                        }
+                        "b" => {
+                            debug!("Scroll to bottom (Cmd+B)");
+                            this.scroll_state.scroll_to_bottom();
+                            cx.notify();
+                            return;
+                        }
+                        "q" => {
+                            debug!("Quit application (Cmd+Q)");
+                            cx.quit();
+                            return;
+                        }
+                        _ => {}
+                    }
                 }
 
                 // Handle search mode input

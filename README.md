@@ -30,6 +30,8 @@ A desktop Markdown viewer built with Rust and GPUI, featuring advanced scrolling
 - **Search**: `Cmd+F` (macOS) or `Ctrl+F` to toggle search
 - **Search Navigation**: `Enter` (next), `Shift+Enter` (previous)
 - **Exit Search**: `Escape` to clear search and return to document
+- **Quick Navigation**: `Cmd+T` (Top), `Cmd+B` (Bottom)
+- **Application**: `Cmd+Q` to quit
 - **Arrow Keys**: `↑`/`↓` for 20px incremental scrolling
 - **Page Navigation**: `Page Up`/`Page Down` for 80% viewport scrolling
 - **Document Navigation**: `Home`/`End` for jumping to top/bottom
