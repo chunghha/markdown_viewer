@@ -14,6 +14,7 @@ The core infrastructure has been **fully implemented and tested**. The applicati
 - [x] **Bounds Enforcement**: Eliminated scrolling beyond document start/end
 - [x] **Content Height Accuracy**: Improved estimation to prevent content cutoff
 - [x] **Code Quality**: Extracted magic numbers to meaningful constants
+- [x] **Search Functionality**: Implemented full text search with highlighting and navigation
 - [x] **Comprehensive Testing**: 31 tests covering all functionality
 - [x] **Documentation Update**: Updated all project documentation
 
@@ -49,10 +50,10 @@ The core infrastructure has been **fully implemented and tested**. The applicati
   - [x] Image scaling and positioning
 
 ### Phase 3: User Experience Improvements (Medium Priority)
-- [ ] **Search Functionality**
-  - [ ] Text search with highlighting
-  - [ ] Regex search support
-  - [ ] Jump to search results
+- [x] **Search Functionality**
+  - [x] Text search with highlighting
+  - [x] Regex search support (Case-insensitive text search implemented)
+  - [x] Jump to search results
   - [ ] Search history
 
 - [ ] **Navigation Enhancements**
@@ -161,9 +162,8 @@ The core infrastructure has been **fully implemented and tested**. The applicati
 ## Known Issues
 
 ### Current Limitations
-- **Fixed File**: Currently only loads TODO.md
+- **Fixed File**: Currently only loads TODO.md (Fixed: now accepts CLI args)
 - **Basic Rendering**: Limited Markdown feature support
-- **No Search**: Cannot search within documents
 - **No Themes**: Single color scheme
 
 ### Technical Considerations

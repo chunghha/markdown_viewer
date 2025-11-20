@@ -41,17 +41,32 @@ pub const CODE_LINE_COLOR: Rgba = Rgba {
 };
 
 pub const COPY_BUTTON_BG_COLOR: Rgba = Rgba {
-    r: 1.0,
-    g: 0.85,
-    b: 0.9,
-    a: 0.9,
+    r: 0.2,
+    g: 0.5,
+    b: 0.8,
+    a: 0.8,
 };
 
 pub const COPY_BUTTON_TEXT_COLOR: Rgba = Rgba {
-    r: 0.1,
-    g: 0.15,
-    b: 0.3,
+    r: 1.0,
+    g: 1.0,
+    b: 1.0,
     a: 1.0,
+};
+
+/// Search match highlight color (yellow)
+pub const SEARCH_BG_COLOR: Rgba = Rgba {
+    r: 1.0,
+    g: 0.92,
+    b: 0.23,
+    a: 0.5,
+};
+
+pub const CURRENT_MATCH_BG_COLOR: Rgba = Rgba {
+    r: 1.0,
+    g: 0.6,
+    b: 0.0,
+    a: 0.6,
 };
 
 pub const BLOCKQUOTE_BORDER_COLOR: Rgba = Rgba {

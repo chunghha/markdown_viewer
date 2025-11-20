@@ -10,8 +10,11 @@ mod internal;
 pub use internal::file_handling::{
     is_supported_extension, load_markdown_content, resolve_image_path, resolve_markdown_file_path,
 };
-pub use internal::rendering::{render_markdown_ast, render_markdown_ast_with_loader};
+pub use internal::rendering::{
+    render_markdown_ast, render_markdown_ast_with_loader, render_markdown_ast_with_search,
+};
 pub use internal::scroll::ScrollState;
+pub use internal::search::SearchState;
 pub use internal::style::*;
 
 // Re-export internal helpers that are useful to binary targets (controlled exposure)

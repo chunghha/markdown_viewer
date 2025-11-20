@@ -19,12 +19,22 @@ A desktop Markdown viewer built with Rust and GPUI, featuring advanced scrolling
 - **Bounds Protection**: Prevents scrolling beyond document boundaries
 - **Content-Aware**: Automatic content height estimation for accurate scroll limits
 
+### Search Functionality
+- **Full Text Search**: Case-insensitive search across the entire document
+- **Real-time Highlighting**: Matches are highlighted as you type
+- **Navigation**: Jump between matches with keyboard shortcuts
+- **Auto-Scroll**: Automatically scrolls to the current match
+- **Visual Feedback**: Search overlay with match count and status
+
 ### Keyboard Shortcuts
+- **Search**: `Cmd+F` (macOS) or `Ctrl+F` to toggle search
+- **Search Navigation**: `Enter` (next), `Shift+Enter` (previous)
+- **Exit Search**: `Escape` to clear search and return to document
 - **Arrow Keys**: `↑`/`↓` for 20px incremental scrolling
 - **Page Navigation**: `Page Up`/`Page Down` for 80% viewport scrolling
 - **Document Navigation**: `Home`/`End` for jumping to top/bottom
 - **Space Navigation**: `Space`/`Shift+Space` for page scrolling
-- **Reset**: `Escape` to return to document top
+- **Reset**: `Escape` to return to document top (when not searching)
 
 ## Architecture
 
@@ -221,6 +231,7 @@ markdown_viewer/
 - **Content Height**: Accurate estimation prevents content cutoff
 
 ### New Features ✅
+- **Search Functionality**: Full text search with highlighting and navigation
 - **CLI Arguments**: Accept file path as command-line argument with fallback to README.md/TODO.md
 - **File Validation**: Proper error handling for missing or invalid files
 - **Usage Help**: Built-in help system with `--help` flag

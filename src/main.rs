@@ -3,18 +3,21 @@ use clap::Parser;
 use comrak::{Arena, Options, parse_document};
 use gpui::{
     App, Application, AsyncWindowContext, Context as GpuiContext, ImageSource, IntoElement,
-    KeyDownEvent, Render, RenderImage, ScrollWheelEvent, WeakEntity, Window, WindowOptions, div,
-    prelude::*, px,
+    KeyDownEvent, Render, RenderImage, ScrollWheelEvent, WeakEntity, Window, WindowOptions,
+    actions, div, prelude::*, px,
 };
 use markdown_viewer::fetch_and_decode_image;
 use markdown_viewer::{
     BG_COLOR, IMAGE_MAX_WIDTH, ScrollState, TEXT_COLOR, config::AppConfig, load_markdown_content,
-    render_markdown_ast_with_loader, resolve_markdown_file_path,
+    resolve_markdown_file_path,
 };
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::runtime::Runtime;
+
+// Define search actions
+actions!(search, [ToggleSearch, NextMatch, PrevMatch, ExitSearch]);
 use tracing::{debug, info, warn};
 
 /// Estimated vertical spacing (margins + padding) applied around images in the renderer.
@@ -45,6 +48,14 @@ struct MarkdownViewer {
     /// Per-image displayed heights (in pixels) used to compute content height for scrolling.
     image_display_heights: HashMap<String, f32>,
     bg_rt: Arc<Runtime>,
+    /// Search state (None when search is not active)
+    #[allow(dead_code)]
+    search_state: Option<markdown_viewer::SearchState>,
+    /// Current search input text
+    #[allow(dead_code)]
+    search_input: String,
+    /// Focus handle for keyboard events
+    focus_handle: gpui::FocusHandle,
 }
 
 impl MarkdownViewer {
@@ -56,6 +67,73 @@ impl MarkdownViewer {
     // - Blockquotes ('>') are slightly larger.
     // - Lists are treated similar to normal lines but could be adjusted independently.
     // This remains a fast heuristic (no full layout pass) but reduces large under/over estimates.
+    // Calculate the estimated Y scroll position for a given byte offset
+    fn calculate_y_for_offset(&self, target_offset: usize) -> f32 {
+        if target_offset >= self.markdown_content.len() {
+            return self.scroll_state.max_scroll_y;
+        }
+
+        let pre_text = &self.markdown_content[..target_offset];
+        // Count newlines to know how many full lines are before the target
+        let lines_to_sum = pre_text.chars().filter(|&c| c == '\n').count();
+
+        let avg_line_height =
+            self.config.theme.base_text_size * self.config.theme.line_height_multiplier;
+
+        let mut y = 0.0;
+        let mut in_fenced_code = false;
+
+        for (i, raw_line) in self.markdown_content.lines().enumerate() {
+            if i >= lines_to_sum {
+                break;
+            }
+
+            let line = raw_line.trim_start();
+
+            // Toggle fenced code block state
+            if line.starts_with("```") {
+                in_fenced_code = !in_fenced_code;
+            }
+
+            let weight = if in_fenced_code {
+                1.25 // code_line_weight
+            } else if line.starts_with('#') {
+                1.6 // heading_weight
+            } else if line.starts_with('>') {
+                1.15 // blockquote_weight
+            } else {
+                1.0 // list_line_weight and normal_line_weight
+            };
+
+            y += avg_line_height * weight;
+
+            // Rough image height estimation
+            // If the line contains an image link that we have loaded, add its height
+            if line.contains("![") && line.contains("](") {
+                // Try to extract path (very rough)
+                if let Some(start) = line.find("](")
+                    && let Some(end) = line[start..].find(')')
+                {
+                    let path = &line[start + 2..start + end];
+                    if let Some(height) = self.image_display_heights.get(path) {
+                        y += height + IMAGE_VERTICAL_PADDING;
+                    }
+                }
+            }
+        }
+
+        y
+    }
+
+    fn scroll_to_current_match(&mut self) {
+        if let Some(m) = self.search_state.as_ref().and_then(|s| s.current_match()) {
+            let y = self.calculate_y_for_offset(m.start);
+            // Center the match
+            let target_y = (y - self.viewport_height / 2.0).max(0.0);
+            self.scroll_state.scroll_y = target_y.min(self.scroll_state.max_scroll_y);
+        }
+    }
+
     fn recompute_max_scroll(&mut self) {
         let avg_line_height =
             self.config.theme.base_text_size * self.config.theme.line_height_multiplier;
@@ -239,6 +317,7 @@ impl Render for MarkdownViewer {
 
         let mut missing_images = HashSet::new();
         let element = div()
+            .track_focus(&self.focus_handle)
             .flex()
             .size_full()
             .bg(BG_COLOR)
@@ -254,10 +333,149 @@ impl Render for MarkdownViewer {
                 }
                 cx.notify();
             }))
+            // Search action handlers
+            .on_action(cx.listener(|this, _: &ToggleSearch, _, cx| {
+                debug!("ToggleSearch action triggered");
+                if this.search_state.is_some() {
+                    // Exit search mode
+                    debug!("Exiting search mode");
+                    this.search_state = None;
+                    this.search_input.clear();
+                } else {
+                    // Enter search mode
+                    debug!("Entering search mode");
+                    this.search_state = Some(markdown_viewer::SearchState::new(
+                        String::new(),
+                        &this.markdown_content,
+                    ));
+                }
+                cx.notify();
+            }))
+            .on_action(cx.listener(|this, _: &NextMatch, _, cx| {
+                debug!("NextMatch action triggered");
+                if let Some(state) = &mut this.search_state {
+                    state.next_match();
+                    debug!("Next match: {:?}", state.current_match_number());
+                    this.scroll_to_current_match();
+                }
+                cx.notify();
+            }))
+            .on_action(cx.listener(|this, _: &PrevMatch, _, cx| {
+                debug!("PrevMatch action triggered");
+                if let Some(state) = &mut this.search_state {
+                    state.prev_match();
+                    debug!("Previous match: {:?}", state.current_match_number());
+                    this.scroll_to_current_match();
+                }
+                cx.notify();
+            }))
+            .on_action(cx.listener(|this, _: &ExitSearch, _, cx| {
+                debug!("ExitSearch action triggered");
+                this.search_state = None;
+                this.search_input.clear();
+                cx.notify();
+            }))
             .on_key_down(cx.listener(|this, event: &KeyDownEvent, _, cx| {
                 let arrow_increment = this.config.scroll.arrow_key_increment;
                 let page_percent = this.config.scroll.page_scroll_percentage;
                 let space_percent = this.config.scroll.space_scroll_percentage;
+
+                // Debug: log all key events
+                debug!(
+                    "Key pressed: '{}', platform: {}, control: {}, shift: {}, alt: {}",
+                    event.keystroke.key,
+                    event.keystroke.modifiers.platform,
+                    event.keystroke.modifiers.control,
+                    event.keystroke.modifiers.shift,
+                    event.keystroke.modifiers.alt
+                );
+
+                // Check for Cmd+F (macOS) or Ctrl+F (other platforms) to toggle search
+                if event.keystroke.key.as_str() == "f"
+                    && (event.keystroke.modifiers.platform || event.keystroke.modifiers.control)
+                {
+                    debug!("Search shortcut triggered (Cmd/Ctrl+F)");
+                    if this.search_state.is_some() {
+                        // Exit search mode
+                        debug!("Exiting search mode");
+                        this.search_state = None;
+                        this.search_input.clear();
+                    } else {
+                        // Enter search mode
+                        debug!("Entering search mode");
+                        this.search_state = Some(markdown_viewer::SearchState::new(
+                            String::new(),
+                            &this.markdown_content,
+                        ));
+                    }
+                    cx.notify();
+                    return;
+                }
+
+                // Handle search mode input
+                if this.search_state.is_some() {
+                    match event.keystroke.key.as_str() {
+                        "escape" => {
+                            // Exit search mode
+                            debug!("Exiting search mode (Escape)");
+                            this.search_state = None;
+                            this.search_input.clear();
+                            cx.notify();
+                            return;
+                        }
+                        "enter" if event.keystroke.modifiers.shift => {
+                            // Previous match
+                            if let Some(state) = &mut this.search_state {
+                                state.prev_match();
+                                debug!(
+                                    "Previous match (key_down): {:?}",
+                                    state.current_match_number()
+                                );
+                                this.scroll_to_current_match();
+                            }
+                            cx.notify();
+                            return;
+                        }
+                        "enter" => {
+                            // Next match
+                            if let Some(state) = &mut this.search_state {
+                                state.next_match();
+                                debug!("Next match (key_down): {:?}", state.current_match_number());
+                                this.scroll_to_current_match();
+                            }
+                            cx.notify();
+                            return;
+                        }
+                        "backspace" => {
+                            // Remove last character
+                            this.search_input.pop();
+                            this.search_state = Some(markdown_viewer::SearchState::new(
+                                this.search_input.clone(),
+                                &this.markdown_content,
+                            ));
+                            debug!("Search query: '{}'", this.search_input);
+                            this.scroll_to_current_match();
+                            cx.notify();
+                            return;
+                        }
+                        key if key.len() == 1
+                            && !event.keystroke.modifiers.control
+                            && !event.keystroke.modifiers.platform =>
+                        {
+                            // Add character to search
+                            this.search_input.push_str(key);
+                            this.search_state = Some(markdown_viewer::SearchState::new(
+                                this.search_input.clone(),
+                                &this.markdown_content,
+                            ));
+                            debug!("Search query: '{}'", this.search_input);
+                            this.scroll_to_current_match();
+                            cx.notify();
+                            return;
+                        }
+                        _ => {}
+                    }
+                }
 
                 match event.keystroke.key.as_str() {
                     "up" => this.scroll_state.scroll_up(arrow_increment),
@@ -304,9 +522,10 @@ impl Render for MarkdownViewer {
                         .pl_8()
                         .relative()
                         .top(px(-self.scroll_state.scroll_y))
-                        .child(render_markdown_ast_with_loader(
+                        .child(markdown_viewer::render_markdown_ast_with_search(
                             root,
                             Some(&self.markdown_file_path),
+                            self.search_state.as_ref(),
                             cx,
                             &mut |path| {
                                 if let Some(ImageState::Loaded(src)) = self.image_cache.get(path) {
@@ -321,6 +540,48 @@ impl Render for MarkdownViewer {
                         )),
                 ),
             );
+
+        // Add search indicator overlay if search is active
+        let element = if let Some(search_state) = &self.search_state {
+            let match_info = if search_state.match_count() > 0 {
+                format!(
+                    "Search: \"{}\" ({} of {} matches)",
+                    self.search_input,
+                    search_state.current_match_number().unwrap_or(0),
+                    search_state.match_count()
+                )
+            } else if self.search_input.is_empty() {
+                "Search: (type to search)".to_string()
+            } else {
+                format!("Search: \"{}\" (no matches)", self.search_input)
+            };
+
+            element.child(
+                div()
+                    .absolute()
+                    .top_0()
+                    .left_0()
+                    .right_0()
+                    .bg(gpui::Rgba {
+                        r: 1.0,
+                        g: 0.95,
+                        b: 0.6,
+                        a: 0.95,
+                    })
+                    .text_color(gpui::Rgba {
+                        r: 0.0,
+                        g: 0.0,
+                        b: 0.0,
+                        a: 1.0,
+                    })
+                    .px_4()
+                    .py_2()
+                    .text_size(px(14.0))
+                    .child(match_info),
+            )
+        } else {
+            element
+        };
 
         for path in missing_images {
             self.load_image(path, window, cx);
@@ -375,28 +636,40 @@ fn main() -> Result<()> {
     );
 
     // Run the GUI on the main thread (required by gpui). Background async work will use `bg_rt`.
-    Application::new().run(move |cx: &mut App| {
+    Application::new().run(move |app: &mut App| {
         let window_config = config.clone();
         let file_path_buf = PathBuf::from(file_path.clone());
         let bg_rt = bg_rt.clone();
-        cx.open_window(WindowOptions::default(), move |_, cx| {
-            cx.new(|_| {
-                let mut viewer = MarkdownViewer {
-                    markdown_content: markdown_input.clone(),
-                    markdown_file_path: file_path_buf.clone(),
-                    scroll_state: ScrollState::new(),
-                    viewport_height: window_config.window.height,
-                    config: window_config.clone(),
-                    image_cache: HashMap::new(),
-                    image_display_heights: HashMap::new(),
-                    bg_rt: bg_rt.clone(),
-                };
-                viewer.recompute_max_scroll(); // Calculate initial scroll bounds
-                debug!("MarkdownViewer initialized");
-                viewer
+        let window = app
+            .open_window(WindowOptions::default(), move |_, cx| {
+                // We can't focus here because we don't have &mut Window
+                cx.new(|cx| {
+                    let focus_handle = cx.focus_handle();
+                    let mut viewer = MarkdownViewer {
+                        markdown_content: markdown_input.clone(),
+                        markdown_file_path: file_path_buf.clone(),
+                        scroll_state: ScrollState::new(),
+                        viewport_height: window_config.window.height,
+                        config: window_config.clone(),
+                        image_cache: HashMap::new(),
+                        image_display_heights: HashMap::new(),
+                        bg_rt: bg_rt.clone(),
+                        search_state: None,
+                        search_input: String::new(),
+                        focus_handle,
+                    };
+                    viewer.recompute_max_scroll(); // Calculate initial scroll bounds
+                    debug!("MarkdownViewer initialized");
+                    viewer
+                })
             })
-        })
-        .unwrap();
+            .unwrap();
+
+        window
+            .update(app, |view, cx, _| {
+                view.focus_handle.focus(cx);
+            })
+            .ok();
     });
 
     Ok(())

@@ -151,6 +151,7 @@ fn collect_text<'a>(node: &'a AstNode<'a>) -> String {
 fn render_markdown_ast_internal<'a, T: 'static>(
     node: &'a AstNode<'a>,
     markdown_file_path: Option<&Path>,
+    search_state: Option<&super::search::SearchState>,
     cx: &mut Context<T>,
     image_loader: &mut dyn FnMut(&str) -> Option<ImageSource>,
 ) -> AnyElement {
@@ -158,7 +159,13 @@ fn render_markdown_ast_internal<'a, T: 'static>(
         NodeValue::Document => div()
             .flex_col()
             .children(node.children().map(|child| {
-                render_markdown_ast_internal(child, markdown_file_path, cx, image_loader)
+                render_markdown_ast_internal(
+                    child,
+                    markdown_file_path,
+                    search_state,
+                    cx,
+                    image_loader,
+                )
             }))
             .into_any_element(),
 
@@ -173,7 +180,13 @@ fn render_markdown_ast_internal<'a, T: 'static>(
                 p = p.mb_2();
             }
             p.children(node.children().map(|child| {
-                render_markdown_ast_internal(child, markdown_file_path, cx, image_loader)
+                render_markdown_ast_internal(
+                    child,
+                    markdown_file_path,
+                    search_state,
+                    cx,
+                    image_loader,
+                )
             }))
             .into_any_element()
         }
@@ -197,15 +210,34 @@ fn render_markdown_ast_internal<'a, T: 'static>(
                     .font_weight(FontWeight::SEMIBOLD)
                     .mt(px((heading.level == 1) as u8 as f32 * 4.0))
                     .children(node.children().map(|child| {
-                        render_markdown_ast_internal(child, markdown_file_path, cx, image_loader)
+                        render_markdown_ast_internal(
+                            child,
+                            markdown_file_path,
+                            search_state,
+                            cx,
+                            image_loader,
+                        )
                     }))
                     .into_any_element()
             }
         }
 
-        NodeValue::Text(text) => div()
-            .child(String::from_utf8_lossy(text.as_bytes()).to_string())
-            .into_any_element(),
+        NodeValue::Text(text) => {
+            let text_str = String::from_utf8_lossy(text.as_bytes()).to_string();
+
+            // Use search highlighting if search is active
+            if let Some(search_state) = search_state {
+                let elements =
+                    super::text_highlight::render_text_with_search(&text_str, Some(search_state));
+                div()
+                    .flex()
+                    .flex_row()
+                    .children(elements)
+                    .into_any_element()
+            } else {
+                div().child(text_str).into_any_element()
+            }
+        }
 
         NodeValue::Code(code) => div()
             .font_family(CODE_FONT)
@@ -230,7 +262,13 @@ fn render_markdown_ast_internal<'a, T: 'static>(
                     comrak::nodes::ListType::Ordered => format!("{}.", items.len() + 1),
                 };
                 let content = div().w_full().children(item.children().map(|child| {
-                    render_markdown_ast_internal(child, markdown_file_path, cx, image_loader)
+                    render_markdown_ast_internal(
+                        child,
+                        markdown_file_path,
+                        search_state,
+                        cx,
+                        image_loader,
+                    )
                 }));
                 items.push(
                     div()
@@ -376,21 +414,39 @@ fn render_markdown_ast_internal<'a, T: 'static>(
         NodeValue::Strong => div()
             .font_weight(FontWeight::BOLD)
             .children(node.children().map(|child| {
-                render_markdown_ast_internal(child, markdown_file_path, cx, image_loader)
+                render_markdown_ast_internal(
+                    child,
+                    markdown_file_path,
+                    search_state,
+                    cx,
+                    image_loader,
+                )
             }))
             .into_any_element(),
 
         NodeValue::Emph => div()
             .italic()
             .children(node.children().map(|child| {
-                render_markdown_ast_internal(child, markdown_file_path, cx, image_loader)
+                render_markdown_ast_internal(
+                    child,
+                    markdown_file_path,
+                    search_state,
+                    cx,
+                    image_loader,
+                )
             }))
             .into_any_element(),
 
         NodeValue::Strikethrough => div()
             .line_through()
             .children(node.children().map(|child| {
-                render_markdown_ast_internal(child, markdown_file_path, cx, image_loader)
+                render_markdown_ast_internal(
+                    child,
+                    markdown_file_path,
+                    search_state,
+                    cx,
+                    image_loader,
+                )
             }))
             .into_any_element(),
 
@@ -400,7 +456,13 @@ fn render_markdown_ast_internal<'a, T: 'static>(
             .pl_4()
             .italic()
             .children(node.children().map(|child| {
-                render_markdown_ast_internal(child, markdown_file_path, cx, image_loader)
+                render_markdown_ast_internal(
+                    child,
+                    markdown_file_path,
+                    search_state,
+                    cx,
+                    image_loader,
+                )
             }))
             .into_any_element(),
 
@@ -416,6 +478,7 @@ fn render_markdown_ast_internal<'a, T: 'static>(
                     row,
                     &table_data.alignments,
                     markdown_file_path,
+                    search_state,
                     cx,
                     image_loader,
                 )
@@ -428,7 +491,13 @@ fn render_markdown_ast_internal<'a, T: 'static>(
                 .flex()
                 .w_full()
                 .children(node.children().map(|child| {
-                    render_markdown_ast_internal(child, markdown_file_path, cx, image_loader)
+                    render_markdown_ast_internal(
+                        child,
+                        markdown_file_path,
+                        search_state,
+                        cx,
+                        image_loader,
+                    )
                 }))
                 .into_any_element()
         }
@@ -438,7 +507,13 @@ fn render_markdown_ast_internal<'a, T: 'static>(
             div()
                 .p(px(TABLE_CELL_PADDING))
                 .children(node.children().map(|child| {
-                    render_markdown_ast_internal(child, markdown_file_path, cx, image_loader)
+                    render_markdown_ast_internal(
+                        child,
+                        markdown_file_path,
+                        search_state,
+                        cx,
+                        image_loader,
+                    )
                 }))
                 .into_any_element()
         }
@@ -446,7 +521,13 @@ fn render_markdown_ast_internal<'a, T: 'static>(
         // Fallback: walk children
         _ => div()
             .children(node.children().map(|child| {
-                render_markdown_ast_internal(child, markdown_file_path, cx, image_loader)
+                render_markdown_ast_internal(
+                    child,
+                    markdown_file_path,
+                    search_state,
+                    cx,
+                    image_loader,
+                )
             }))
             .into_any_element(),
     }
@@ -460,7 +541,7 @@ pub fn render_markdown_ast<'a, T: 'static>(
     node: &'a AstNode<'a>,
     cx: &mut Context<T>,
 ) -> AnyElement {
-    render_markdown_ast_internal(node, None, cx, &mut |_| None)
+    render_markdown_ast_internal(node, None, None, cx, &mut |_| None)
 }
 
 /// Render a Markdown AST node to a GPUI element with markdown file path context
@@ -472,7 +553,20 @@ pub fn render_markdown_ast_with_loader<'a, T: 'static>(
     cx: &mut Context<T>,
     image_loader: &mut dyn FnMut(&str) -> Option<ImageSource>,
 ) -> AnyElement {
-    render_markdown_ast_internal(node, markdown_file_path, cx, image_loader)
+    render_markdown_ast_internal(node, markdown_file_path, None, cx, image_loader)
+}
+
+/// Render a Markdown AST node to a GPUI element with search highlighting
+///
+/// This version accepts search state to highlight matching text.
+pub fn render_markdown_ast_with_search<'a, T: 'static>(
+    node: &'a AstNode<'a>,
+    markdown_file_path: Option<&Path>,
+    search_state: Option<&super::search::SearchState>,
+    cx: &mut Context<T>,
+    image_loader: &mut dyn FnMut(&str) -> Option<ImageSource>,
+) -> AnyElement {
+    render_markdown_ast_internal(node, markdown_file_path, search_state, cx, image_loader)
 }
 
 /// Render a table row with proper alignment and header styling
@@ -480,6 +574,7 @@ fn render_table_row<'a, T: 'static>(
     row_node: &'a AstNode<'a>,
     alignments: &[comrak::nodes::TableAlignment],
     markdown_file_path: Option<&Path>,
+    search_state: Option<&super::search::SearchState>,
     cx: &mut Context<T>,
     image_loader: &mut dyn FnMut(&str) -> Option<ImageSource>,
 ) -> AnyElement {
@@ -504,6 +599,7 @@ fn render_table_row<'a, T: 'static>(
                 cell,
                 alignments.get(idx),
                 markdown_file_path,
+                search_state,
                 cx,
                 image_loader,
             )
@@ -518,6 +614,7 @@ fn render_table_cell<'a, T: 'static>(
     cell_node: &'a AstNode<'a>,
     alignment: Option<&comrak::nodes::TableAlignment>,
     markdown_file_path: Option<&Path>,
+    search_state: Option<&super::search::SearchState>,
     cx: &mut Context<T>,
     image_loader: &mut dyn FnMut(&str) -> Option<ImageSource>,
 ) -> AnyElement {
@@ -538,11 +635,9 @@ fn render_table_cell<'a, T: 'static>(
     };
 
     cell_div
-        .children(
-            cell_node.children().map(|child| {
-                render_markdown_ast_internal(child, markdown_file_path, cx, image_loader)
-            }),
-        )
+        .children(cell_node.children().map(|child| {
+            render_markdown_ast_internal(child, markdown_file_path, search_state, cx, image_loader)
+        }))
         .into_any_element()
 }
 

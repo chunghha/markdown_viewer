@@ -10,7 +10,9 @@ pub mod image;
 pub mod image_loader;
 pub mod rendering;
 pub mod scroll;
+pub mod search;
 pub mod style;
+pub mod text_highlight;
 
 // Note: selected helpers from internal submodules are re-exported from
 // `lib.rs` when the binary needs them. Avoid re-exporting here to prevent
