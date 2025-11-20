@@ -15,6 +15,8 @@ The core infrastructure has been **fully implemented and tested**. The applicati
 - [x] **Content Height Accuracy**: Improved estimation to prevent content cutoff
 - [x] **Code Quality**: Extracted magic numbers to meaningful constants
 - [x] **Search Functionality**: Implemented full text search with highlighting and navigation
+- [x] **Global Shortcuts**: Added Cmd+T/B/Q and font size controls
+- [x] **Visual Polish**: Added version badge and refined styling
 - [x] **Comprehensive Testing**: 31 tests covering all functionality
 - [x] **Documentation Update**: Updated all project documentation
 
@@ -64,7 +66,7 @@ The core infrastructure has been **fully implemented and tested**. The applicati
 
 - [ ] **Visual Improvements**
   - [ ] Theme selection (light/dark)
-  - [ ] Font size adjustment
+  - [x] Font size adjustment
   - [ ] Custom CSS styling support
   - [ ] Print preview mode
 

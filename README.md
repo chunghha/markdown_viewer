@@ -26,6 +26,10 @@ A desktop Markdown viewer built with Rust and GPUI, featuring advanced scrolling
 - **Auto-Scroll**: Automatically scrolls to the current match
 - **Visual Feedback**: Search overlay with match count and status
 
+### Visual Enhancements
+- **Version Badge**: Displays current version in bottom-right corner
+- **Styled Interface**: Custom colors and fonts for a polished look
+
 ### Keyboard Shortcuts
 - **Search**: `Cmd+F` (macOS) or `Ctrl+F` to toggle search
 - **Search Navigation**: `Enter` (next), `Shift+Enter` (previous)
@@ -36,6 +40,7 @@ A desktop Markdown viewer built with Rust and GPUI, featuring advanced scrolling
 - **Page Navigation**: `Page Up`/`Page Down` for 80% viewport scrolling
 - **Document Navigation**: `Home`/`End` for jumping to top/bottom
 - **Space Navigation**: `Space`/`Shift+Space` for page scrolling
+- **Font Size**: `Cmd+=` (Increase), `Cmd+-` (Decrease)
 - **Reset**: `Escape` to return to document top (when not searching)
 
 ## Architecture

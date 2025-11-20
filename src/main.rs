@@ -423,7 +423,7 @@ impl Render for MarkdownViewer {
                     return;
                 }
 
-                // Handle global shortcuts (Cmd+T, Cmd+B, Cmd+Q)
+                // Handle global shortcuts (Cmd+T, Cmd+B, Cmd+Q, Cmd+=, Cmd+-)
                 if event.keystroke.modifiers.platform {
                     match event.keystroke.key.as_str() {
                         "t" => {
@@ -441,6 +441,26 @@ impl Render for MarkdownViewer {
                         "q" => {
                             debug!("Quit application (Cmd+Q)");
                             cx.quit();
+                            return;
+                        }
+                        "=" | "+" => {
+                            debug!("Increase font size (Cmd+=)");
+                            let new_size = (this.config.theme.base_text_size + 2.0).min(64.0);
+                            if (new_size - this.config.theme.base_text_size).abs() > 0.01 {
+                                this.config.theme.base_text_size = new_size;
+                                this.recompute_max_scroll();
+                                cx.notify();
+                            }
+                            return;
+                        }
+                        "-" => {
+                            debug!("Decrease font size (Cmd+-)");
+                            let new_size = (this.config.theme.base_text_size - 2.0).max(8.0);
+                            if (new_size - this.config.theme.base_text_size).abs() > 0.01 {
+                                this.config.theme.base_text_size = new_size;
+                                this.recompute_max_scroll();
+                                cx.notify();
+                            }
                             return;
                         }
                         _ => {}
