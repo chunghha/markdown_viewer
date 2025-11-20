@@ -90,6 +90,20 @@ pub const HOVER_LINK_COLOR: Rgba = Rgba {
     a: 1.0,
 };
 
+pub const VERSION_BADGE_BG_COLOR: Rgba = Rgba {
+    r: 0.529,
+    g: 0.808,
+    b: 0.922,
+    a: 1.0,
+};
+
+pub const VERSION_BADGE_TEXT_COLOR: Rgba = Rgba {
+    r: 0.0,
+    g: 0.122,
+    b: 0.247,
+    a: 1.0,
+};
+
 // ---- Image Styling ---------------------------------------------------------
 
 /// Maximum width for inline images to prevent overflow

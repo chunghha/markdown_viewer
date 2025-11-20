@@ -8,8 +8,8 @@ use gpui::{
 };
 use markdown_viewer::fetch_and_decode_image;
 use markdown_viewer::{
-    BG_COLOR, IMAGE_MAX_WIDTH, ScrollState, TEXT_COLOR, config::AppConfig, load_markdown_content,
-    resolve_markdown_file_path,
+    BG_COLOR, IMAGE_MAX_WIDTH, ScrollState, TEXT_COLOR, VERSION_BADGE_BG_COLOR,
+    VERSION_BADGE_TEXT_COLOR, config::AppConfig, load_markdown_content, resolve_markdown_file_path,
 };
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
@@ -329,6 +329,7 @@ impl Render for MarkdownViewer {
         let element = div()
             .track_focus(&self.focus_handle)
             .flex()
+            .relative() // Ensure absolute children are positioned relative to this container
             .size_full()
             .bg(BG_COLOR)
             .text_color(TEXT_COLOR)
@@ -573,6 +574,20 @@ impl Render for MarkdownViewer {
                             },
                         )),
                 ),
+            )
+            // Version Badge
+            .child(
+                div()
+                    .absolute()
+                    .bottom_4()
+                    .right_4()
+                    .bg(VERSION_BADGE_BG_COLOR)
+                    .text_color(VERSION_BADGE_TEXT_COLOR)
+                    .rounded_md()
+                    .px_2()
+                    .py_1()
+                    .text_xs()
+                    .child(format!("v{}", env!("CARGO_PKG_VERSION"))),
             );
 
         // Add search indicator overlay if search is active
