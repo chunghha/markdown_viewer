@@ -1,6 +1,6 @@
 [package]
 name = "markdown_viewer"
-version = "0.6.4"
+version = "0.7.0"
 edition = "2024"
 
 [dependencies]
@@ -9,6 +9,8 @@ clap = { version = "4.5.53", features = ["derive"] }
 comrak = "0.48.0"
 gpui = "0.2.2"
 image = "0.25.9"
+notify = "8.2.0"
+notify-debouncer-full = "0.6.0"
 reqwest = { version = "0.12.24", features = ["json"] }
 ron = "0.12.0"
 serde = { version = "1.0.228", features = ["derive"] }

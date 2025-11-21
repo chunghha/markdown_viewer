@@ -8,12 +8,14 @@ use gpui::{
 };
 use markdown_viewer::fetch_and_decode_image;
 use markdown_viewer::{
-    BG_COLOR, IMAGE_MAX_WIDTH, ScrollState, TEXT_COLOR, VERSION_BADGE_BG_COLOR,
+    BG_COLOR, FileWatcherEvent, IMAGE_MAX_WIDTH, ScrollState, TEXT_COLOR, VERSION_BADGE_BG_COLOR,
     VERSION_BADGE_TEXT_COLOR, config::AppConfig, load_markdown_content, resolve_markdown_file_path,
+    start_watching,
 };
+use notify_debouncer_full::Debouncer;
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
-use std::sync::Arc;
+use std::sync::{Arc, mpsc::Receiver};
 use tokio::runtime::Runtime;
 
 // Define search actions
@@ -58,6 +60,13 @@ struct MarkdownViewer {
     focus_handle: gpui::FocusHandle,
     /// Whether to show the help overlay
     show_help: bool,
+    /// File watcher event receiver
+    file_watcher_rx: Option<Receiver<FileWatcherEvent>>,
+    /// File watcher debouncer (must be kept alive)
+    #[allow(dead_code)]
+    file_watcher: Option<Debouncer<notify::RecommendedWatcher, notify_debouncer_full::FileIdMap>>,
+    /// Whether the file has been deleted
+    file_deleted: bool,
 }
 
 impl MarkdownViewer {
@@ -316,6 +325,61 @@ impl MarkdownViewer {
 
 impl Render for MarkdownViewer {
     fn render(&mut self, window: &mut Window, cx: &mut GpuiContext<Self>) -> impl IntoElement {
+        // Poll file watcher for events (non-blocking)
+        // Collect events first to avoid borrow checker issues
+        let mut events = Vec::new();
+        if let Some(rx) = &self.file_watcher_rx {
+            while let Ok(event) = rx.try_recv() {
+                events.push(event);
+            }
+        }
+
+        // Process collected events
+        for event in events {
+            match event {
+                FileWatcherEvent::Modified => {
+                    info!("File modified, reloading: {:?}", self.markdown_file_path);
+                    // Save current scroll position
+                    let saved_scroll_y = self.scroll_state.scroll_y;
+
+                    // Reload file content
+                    if let Some(path_str) = self.markdown_file_path.to_str() {
+                        match load_markdown_content(path_str) {
+                            Ok(new_content) => {
+                                self.markdown_content = new_content;
+                                // Clear image cache as images may have changed
+                                self.image_cache.clear();
+                                self.image_display_heights.clear();
+                                // Restore scroll position
+                                self.scroll_state.scroll_y = saved_scroll_y;
+                                self.recompute_max_scroll();
+                                // Clear file deleted flag if it was set
+                                self.file_deleted = false;
+                                info!("File reloaded successfully");
+                            }
+                            Err(e) => {
+                                warn!("Failed to reload file: {}", e);
+                            }
+                        }
+                    } else {
+                        warn!(
+                            "Failed to convert path to string: {:?}",
+                            self.markdown_file_path
+                        );
+                    }
+                    cx.notify();
+                }
+                FileWatcherEvent::Deleted => {
+                    info!("File deleted: {:?}", self.markdown_file_path);
+                    self.file_deleted = true;
+                    cx.notify();
+                }
+                FileWatcherEvent::Error(err) => {
+                    warn!("File watcher error: {}", err);
+                }
+            }
+        }
+
         // Update viewport height if changed
         let current_height = window.viewport_size().height;
         let current_height_f32 = f32::from(current_height);
@@ -697,6 +761,36 @@ impl Render for MarkdownViewer {
             element
         };
 
+        // File Deleted Overlay
+        let element = if self.file_deleted {
+            element.child(
+                div()
+                    .absolute()
+                    .top_0()
+                    .left_0()
+                    .right_0()
+                    .bg(gpui::Rgba {
+                        r: 1.0,
+                        g: 0.4,
+                        b: 0.4,
+                        a: 0.95,
+                    })
+                    .text_color(gpui::Rgba {
+                        r: 1.0,
+                        g: 1.0,
+                        b: 1.0,
+                        a: 1.0,
+                    })
+                    .px_4()
+                    .py_2()
+                    .text_size(px(14.0))
+                    .font_weight(gpui::FontWeight::BOLD)
+                    .child("⚠ File deleted - monitoring for recreation"),
+            )
+        } else {
+            element
+        };
+
         for path in missing_images {
             self.load_image(path, window, cx);
         }
@@ -749,6 +843,30 @@ fn main() -> Result<()> {
             .context("Failed to build background Tokio runtime")?,
     );
 
+    // Start file watcher if enabled
+    let (file_watcher_rx, file_watcher) = if config.file_watcher.enabled {
+        // Convert to absolute path for file watcher
+        let abs_file_path = std::fs::canonicalize(&file_path)
+            .unwrap_or_else(|_| std::path::PathBuf::from(&file_path));
+
+        match start_watching(&abs_file_path, config.file_watcher.debounce_ms) {
+            Ok((rx, debouncer)) => {
+                info!("File watcher started for: {}", file_path);
+                (Some(rx), Some(debouncer))
+            }
+            Err(e) => {
+                warn!(
+                    "Failed to start file watcher for '{}': {:?}. Continuing without auto-reload.",
+                    file_path, e
+                );
+                (None, None)
+            }
+        }
+    } else {
+        info!("File watcher disabled in configuration");
+        (None, None)
+    };
+
     // Run the GUI on the main thread (required by gpui). Background async work will use `bg_rt`.
     Application::new().run(move |app: &mut App| {
         let window_config = config.clone();
@@ -772,6 +890,9 @@ fn main() -> Result<()> {
                         search_input: String::new(),
                         focus_handle,
                         show_help: false,
+                        file_watcher_rx,
+                        file_watcher,
+                        file_deleted: false,
                     };
                     viewer.recompute_max_scroll(); // Calculate initial scroll bounds
                     debug!("MarkdownViewer initialized");

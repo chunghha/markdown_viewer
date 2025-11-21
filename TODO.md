@@ -17,8 +17,9 @@ The core infrastructure has been **fully implemented and tested**. The applicati
 - [x] **Search Functionality**: Implemented full text search with highlighting and navigation
 - [x] **Global Shortcuts**: Added Cmd+T/B/Q and font size controls
 - [x] **Visual Polish**: Added version badge and refined styling
-- [x] **Comprehensive Testing**: 31 tests covering all functionality
+- [x] **Comprehensive Testing**: 65 tests covering all functionality
 - [x] **Documentation Update**: Updated all project documentation
+- [x] **File Watching**: Auto-reload on file changes with scroll position preservation
 
 ## Next Development Phases 🚀
 
@@ -30,10 +31,12 @@ The core infrastructure has been **fully implemented and tested**. The applicati
   - [x] Default to README.md if no argument provided
   - [x] Professional error messages with context
 
-- [ ] **File Watching**
-  - [ ] Auto-reload when file changes
-  - [ ] Preserve scroll position on reload
-  - [ ] Handle file deletion gracefully
+- [x] **File Watching**
+  - [x] Auto-reload when file changes
+  - [x] Preserve scroll position on reload
+  - [x] Handle file deletion gracefully
+  - [x] Configurable debouncing
+  - [x] Cross-platform compatibility
 
 ### Phase 2: Enhanced Markdown Support (Medium Priority)
 - [x] **Tables**

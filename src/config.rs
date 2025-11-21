@@ -16,6 +16,9 @@ pub struct AppConfig {
     /// File handling configuration
     pub files: FileConfig,
 
+    /// File watcher configuration
+    pub file_watcher: FileWatcherConfig,
+
     /// Scroll behavior configuration
     pub scroll: ScrollConfig,
 
@@ -47,6 +50,16 @@ pub struct FileConfig {
 
     /// Supported file extensions
     pub supported_extensions: Vec<String>,
+}
+
+/// File watcher configuration
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct FileWatcherConfig {
+    /// Enable automatic file watching and reloading
+    pub enabled: bool,
+
+    /// Debounce timeout in milliseconds
+    pub debounce_ms: u64,
 }
 
 /// Scroll behavior configuration
@@ -106,6 +119,15 @@ impl Default for FileConfig {
         Self {
             default_files: vec!["README.md".to_string(), "TODO.md".to_string()],
             supported_extensions: vec!["md".to_string(), "markdown".to_string(), "txt".to_string()],
+        }
+    }
+}
+
+impl Default for FileWatcherConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            debounce_ms: 100,
         }
     }
 }
@@ -389,6 +411,10 @@ mod tests {
     logging: (
         default_level: "debug",
         enable_file_logging: true,
+    ),
+    file_watcher: (
+        enabled: true,
+        debounce_ms: 100,
     ),
 )
 "#;

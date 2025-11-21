@@ -8,6 +8,7 @@ A desktop Markdown viewer built with Rust and GPUI, featuring advanced scrolling
 - **Markdown Rendering**: Full support for CommonMark-compliant Markdown using `comrak`
 - **Rich Text Display**: Styled headings, lists, **syntax-highlighted code blocks with line numbers**, **clickable links** with hover effects, emphasis, blockquotes, and tables
 - **CLI Interface**: Command-line argument support for loading any Markdown file
+- **File Watching**: Automatic reload when files change on disk with scroll position preservation
 - **Clean Interface**: Minimalist design focused on readability
 - **Configuration System**: Customizable settings via RON configuration files
 - **Structured Logging**: Debug and trace logging with `tracing`
@@ -122,6 +123,7 @@ cp config.example.ron config.ron
     scroll: (page_scroll_percentage: 0.9, arrow_key_increment: 30.0),
     theme: (base_text_size: 20.0, primary_font: "Arial"),
     logging: (default_level: "debug"),
+    file_watcher: (enabled: true, debounce_ms: 100),
 )
 ```
 
@@ -198,6 +200,8 @@ cargo fmt
 - **comrak**: CommonMark-compliant Markdown parsing
 - **gpui**: Modern Rust GUI framework for desktop applications
 - **clap**: Command-line argument parsing for file specification
+- **notify**: Cross-platform file system event monitoring
+- **notify-debouncer-full**: Debouncing for file system events
 - **anyhow**: Ergonomic error handling with context
 - **tracing**: Structured logging and diagnostics
 - **ron**: Rusty Object Notation for configuration files
@@ -209,7 +213,7 @@ cargo fmt
 - **Responsive**: 60 FPS scrolling with large documents
 
 ### Code Quality
-- **42 Unit Tests**: Comprehensive test coverage for scrolling, file handling, configuration, format validation, and table rendering
+- **65 Unit Tests**: Comprehensive test coverage for scrolling, file handling, configuration, format validation, table rendering, and file watching
 - **Clippy Clean**: Passes all Rust linting checks
 - **Well Documented**: Inline documentation and implementation guides
 
@@ -239,6 +243,7 @@ markdown_viewer/
 - **Content Height**: Accurate estimation prevents content cutoff
 
 ### New Features ✅
+- **File Watching**: Automatic reload on file changes with scroll position preservation and deletion handling
 - **Search Functionality**: Full text search with highlighting and navigation
 - **CLI Arguments**: Accept file path as command-line argument with fallback to README.md/TODO.md
 - **File Validation**: Proper error handling for missing or invalid files
@@ -250,7 +255,7 @@ markdown_viewer/
 ### Code Quality ✅
 - **Meaningful Constants**: Extracted magic numbers to named constants
 - **Enhanced Documentation**: Updated all project documentation
-- **Test Coverage**: 31 tests covering scrolling, file handling, configuration, and validation
+- **Test Coverage**: 65 tests covering scrolling, file handling, configuration, validation, and file watching
 - **Safe Tests**: File-manipulating tests now preserve project files
 
 ## Development Philosophy
@@ -290,13 +295,10 @@ task pre-commit
 ## Future Enhancements
 
 - **Configuration UI**: In-app settings panel
-- **Multiple File Formats**: Support for .markdown, .txt extensions
-- **File Watching**: Auto-reload when files change
-- **Syntax Highlighting**: Code block syntax highlighting
-- **Table Support**: Enhanced table rendering
-- **Image Display**: Inline image support
-- **Export Options**: PDF/HTML export functionality
+- **Navigation Enhancements**: Table of contents sidebar, heading-based navigation
 - **Theme System**: Multiple color schemes and custom themes
+- **Export Options**: PDF/HTML export functionality
+- **Performance**: Lazy loading for very large files
 
 ## Resources
 

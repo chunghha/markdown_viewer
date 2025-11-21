@@ -10,6 +10,7 @@ mod internal;
 pub use internal::file_handling::{
     is_supported_extension, load_markdown_content, resolve_image_path, resolve_markdown_file_path,
 };
+pub use internal::file_watcher::{FileWatcherEvent, start_watching};
 pub use internal::rendering::{
     render_markdown_ast, render_markdown_ast_with_loader, render_markdown_ast_with_search,
 };

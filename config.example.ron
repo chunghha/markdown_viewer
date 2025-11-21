@@ -56,4 +56,11 @@
         // Enable logging to file (not yet implemented)
         enable_file_logging: false,
     ),
+    // File watcher configuration for auto-reload
+    file_watcher: (
+        // Enable automatic file reloading when the file changes
+        enabled: true,
+        // Debounce timeout in milliseconds (prevents excessive reloads during rapid saves)
+        debounce_ms: 100,
+    ),
 )
