@@ -36,6 +36,26 @@ fn syntect_color_to_gpui(color: syntect::highlighting::Color) -> Rgba {
     }
 }
 
+/// Calculate responsive column width for tables
+///
+/// Returns (column_width, needs_horizontal_scroll)
+fn calculate_column_width(num_columns: usize, viewport_width: f32) -> (f32, bool) {
+    if num_columns == 0 {
+        return (MIN_COLUMN_WIDTH, false);
+    }
+
+    let available_width = viewport_width - TABLE_HORIZONTAL_PADDING;
+    let equal_width = available_width / num_columns as f32;
+
+    if equal_width < MIN_COLUMN_WIDTH {
+        // Use minimum width and enable horizontal scrolling
+        (MIN_COLUMN_WIDTH, true)
+    } else {
+        // Use equal distribution, no scrolling needed
+        (equal_width, false)
+    }
+}
+
 fn render_highlighted_code_block<T: 'static>(
     code: String,
     language: String,
@@ -152,6 +172,7 @@ fn render_markdown_ast_internal<'a, T: 'static>(
     node: &'a AstNode<'a>,
     markdown_file_path: Option<&Path>,
     search_state: Option<&super::search::SearchState>,
+    viewport_width: f32,
     cx: &mut Context<T>,
     image_loader: &mut dyn FnMut(&str) -> Option<ImageSource>,
 ) -> AnyElement {
@@ -163,6 +184,7 @@ fn render_markdown_ast_internal<'a, T: 'static>(
                     child,
                     markdown_file_path,
                     search_state,
+                    viewport_width,
                     cx,
                     image_loader,
                 )
@@ -184,6 +206,7 @@ fn render_markdown_ast_internal<'a, T: 'static>(
                     child,
                     markdown_file_path,
                     search_state,
+                    viewport_width,
                     cx,
                     image_loader,
                 )
@@ -214,6 +237,7 @@ fn render_markdown_ast_internal<'a, T: 'static>(
                             child,
                             markdown_file_path,
                             search_state,
+                            viewport_width,
                             cx,
                             image_loader,
                         )
@@ -266,6 +290,7 @@ fn render_markdown_ast_internal<'a, T: 'static>(
                         child,
                         markdown_file_path,
                         search_state,
+                        viewport_width,
                         cx,
                         image_loader,
                     )
@@ -418,6 +443,7 @@ fn render_markdown_ast_internal<'a, T: 'static>(
                     child,
                     markdown_file_path,
                     search_state,
+                    viewport_width,
                     cx,
                     image_loader,
                 )
@@ -431,6 +457,7 @@ fn render_markdown_ast_internal<'a, T: 'static>(
                     child,
                     markdown_file_path,
                     search_state,
+                    viewport_width,
                     cx,
                     image_loader,
                 )
@@ -444,6 +471,7 @@ fn render_markdown_ast_internal<'a, T: 'static>(
                     child,
                     markdown_file_path,
                     search_state,
+                    viewport_width,
                     cx,
                     image_loader,
                 )
@@ -460,30 +488,46 @@ fn render_markdown_ast_internal<'a, T: 'static>(
                     child,
                     markdown_file_path,
                     search_state,
+                    viewport_width,
                     cx,
                     image_loader,
                 )
             }))
             .into_any_element(),
 
-        // Table rendering
-        NodeValue::Table(table_data) => div()
-            .flex_col()
-            .w_full()
-            .my_2()
-            .border_1()
-            .border_color(TABLE_BORDER_COLOR)
-            .children(node.children().map(|row| {
-                render_table_row(
-                    row,
-                    &table_data.alignments,
-                    markdown_file_path,
-                    search_state,
-                    cx,
-                    image_loader,
-                )
-            }))
-            .into_any_element(),
+        // Table rendering with responsive column widths
+        NodeValue::Table(table_data) => {
+            // Count columns from first row
+            let num_columns = node
+                .children()
+                .next()
+                .map(|row| row.children().count())
+                .unwrap_or(0);
+
+            // Use actual viewport width for responsive calculation
+            let (column_width, _needs_scroll) = calculate_column_width(num_columns, viewport_width);
+
+            // Create table container with responsive column widths
+            div()
+                .flex_col()
+                .w_full()
+                .my_2()
+                .border_1()
+                .border_color(TABLE_BORDER_COLOR)
+                .children(node.children().map(|row| {
+                    render_table_row(
+                        row,
+                        &table_data.alignments,
+                        column_width,
+                        markdown_file_path,
+                        search_state,
+                        viewport_width,
+                        cx,
+                        image_loader,
+                    )
+                }))
+                .into_any_element()
+        }
 
         NodeValue::TableRow(_) => {
             // Rows should be rendered via render_table_row, but handle gracefully
@@ -495,6 +539,7 @@ fn render_markdown_ast_internal<'a, T: 'static>(
                         child,
                         markdown_file_path,
                         search_state,
+                        viewport_width,
                         cx,
                         image_loader,
                     )
@@ -511,6 +556,7 @@ fn render_markdown_ast_internal<'a, T: 'static>(
                         child,
                         markdown_file_path,
                         search_state,
+                        viewport_width,
                         cx,
                         image_loader,
                     )
@@ -525,6 +571,7 @@ fn render_markdown_ast_internal<'a, T: 'static>(
                     child,
                     markdown_file_path,
                     search_state,
+                    viewport_width,
                     cx,
                     image_loader,
                 )
@@ -536,12 +583,15 @@ fn render_markdown_ast_internal<'a, T: 'static>(
 /// Render a Markdown AST node to a GPUI element
 ///
 /// This is the public API that maintains backward compatibility.
-/// For image support with relative paths, use `render_markdown_ast_with_path` instead.
+/// Render a Markdown AST node to a GPUI element
+///
+/// This is the simplest rendering function that uses default settings.
 pub fn render_markdown_ast<'a, T: 'static>(
     node: &'a AstNode<'a>,
     cx: &mut Context<T>,
 ) -> AnyElement {
-    render_markdown_ast_internal(node, None, None, cx, &mut |_| None)
+    const DEFAULT_VIEWPORT_WIDTH: f32 = 1200.0;
+    render_markdown_ast_internal(node, None, None, DEFAULT_VIEWPORT_WIDTH, cx, &mut |_| None)
 }
 
 /// Render a Markdown AST node to a GPUI element with markdown file path context
@@ -553,7 +603,15 @@ pub fn render_markdown_ast_with_loader<'a, T: 'static>(
     cx: &mut Context<T>,
     image_loader: &mut dyn FnMut(&str) -> Option<ImageSource>,
 ) -> AnyElement {
-    render_markdown_ast_internal(node, markdown_file_path, None, cx, image_loader)
+    const DEFAULT_VIEWPORT_WIDTH: f32 = 1200.0;
+    render_markdown_ast_internal(
+        node,
+        markdown_file_path,
+        None,
+        DEFAULT_VIEWPORT_WIDTH,
+        cx,
+        image_loader,
+    )
 }
 
 /// Render a Markdown AST node to a GPUI element with search highlighting
@@ -563,18 +621,29 @@ pub fn render_markdown_ast_with_search<'a, T: 'static>(
     node: &'a AstNode<'a>,
     markdown_file_path: Option<&Path>,
     search_state: Option<&super::search::SearchState>,
+    viewport_width: f32,
     cx: &mut Context<T>,
     image_loader: &mut dyn FnMut(&str) -> Option<ImageSource>,
 ) -> AnyElement {
-    render_markdown_ast_internal(node, markdown_file_path, search_state, cx, image_loader)
+    render_markdown_ast_internal(
+        node,
+        markdown_file_path,
+        search_state,
+        viewport_width,
+        cx,
+        image_loader,
+    )
 }
 
 /// Render a table row with proper alignment and header styling
+#[allow(clippy::too_many_arguments)]
 fn render_table_row<'a, T: 'static>(
     row_node: &'a AstNode<'a>,
     alignments: &[comrak::nodes::TableAlignment],
+    column_width: f32,
     markdown_file_path: Option<&Path>,
     search_state: Option<&super::search::SearchState>,
+    viewport_width: f32,
     cx: &mut Context<T>,
     image_loader: &mut dyn FnMut(&str) -> Option<ImageSource>,
 ) -> AnyElement {
@@ -590,7 +659,7 @@ fn render_table_row<'a, T: 'static>(
         row_div = row_div.bg(TABLE_HEADER_BG).font_weight(FontWeight::BOLD);
     }
 
-    // Render cells with alignment
+    // Render cells with alignment and calculated width
     let cells: Vec<AnyElement> = row_node
         .children()
         .enumerate()
@@ -598,8 +667,10 @@ fn render_table_row<'a, T: 'static>(
             render_table_cell(
                 cell,
                 alignments.get(idx),
+                column_width,
                 markdown_file_path,
                 search_state,
+                viewport_width,
                 cx,
                 image_loader,
             )
@@ -609,22 +680,28 @@ fn render_table_row<'a, T: 'static>(
     row_div.children(cells).into_any_element()
 }
 
-/// Render a table cell with alignment
+/// Render a table cell with alignment and responsive width
+#[allow(clippy::too_many_arguments)]
 fn render_table_cell<'a, T: 'static>(
     cell_node: &'a AstNode<'a>,
     alignment: Option<&comrak::nodes::TableAlignment>,
+    column_width: f32,
     markdown_file_path: Option<&Path>,
     search_state: Option<&super::search::SearchState>,
+    viewport_width: f32,
     cx: &mut Context<T>,
     image_loader: &mut dyn FnMut(&str) -> Option<ImageSource>,
 ) -> AnyElement {
     use comrak::nodes::TableAlignment;
 
     let mut cell_div = div()
-        .flex_1()
+        .w(px(column_width))
+        .min_w(px(MIN_COLUMN_WIDTH))
         .p(px(TABLE_CELL_PADDING))
         .border_r_1()
-        .border_color(TABLE_BORDER_COLOR);
+        .border_color(TABLE_BORDER_COLOR)
+        .flex_shrink_0()
+        .overflow_hidden();
 
     // Apply alignment
     cell_div = match alignment {
@@ -636,7 +713,14 @@ fn render_table_cell<'a, T: 'static>(
 
     cell_div
         .children(cell_node.children().map(|child| {
-            render_markdown_ast_internal(child, markdown_file_path, search_state, cx, image_loader)
+            render_markdown_ast_internal(
+                child,
+                markdown_file_path,
+                search_state,
+                viewport_width,
+                cx,
+                image_loader,
+            )
         }))
         .into_any_element()
 }

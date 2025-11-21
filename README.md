@@ -6,7 +6,8 @@ A desktop Markdown viewer built with Rust and GPUI, featuring advanced scrolling
 
 ### Core Functionality
 - **Markdown Rendering**: Full support for CommonMark-compliant Markdown using `comrak`
-- **Rich Text Display**: Styled headings, lists, **syntax-highlighted code blocks with line numbers**, **clickable links** with hover effects, emphasis, blockquotes, and tables
+- **Rich Text Display**: Styled headings, lists, **syntax-highlighted code blocks with line numbers**, **clickable links** with hover effects, emphasis, blockquotes, and **responsive tables**
+- **Responsive Tables**: Dynamic column widths with 150px minimum to ensure readability
 - **CLI Interface**: Command-line argument support for loading any Markdown file
 - **File Watching**: Automatic reload when files change on disk with scroll position preservation
 - **Clean Interface**: Minimalist design focused on readability
@@ -242,8 +243,26 @@ markdown_viewer/
 - **Bounds Enforcement**: Eliminated scrolling beyond document boundaries
 - **Content Height**: Accurate estimation prevents content cutoff
 
-### New Features ✅
-- **File Watching**: Automatic reload on file changes with scroll position preservation and deletion handling
+### v0.7.1 - Responsive Table Layout (2025-11-20)
+- ✨ **Responsive Tables**: Dynamic column width calculation based on column count
+- 📏 **Minimum Width**: 150px minimum column width ensures readability
+- 🎨 **Improved Layout**: Fixed-width columns with better text wrapping and warm beige headers
+- 🔧 **Smart Sizing**: Tables adapt to content while maintaining consistency
+- 🐛 **Bug Fixes**: Corrected viewport width calculation for dynamic resizing
+- 🧹 **Code Quality**: Resolved clippy warnings and optimized rendering performance
+
+### v0.7.0 - File Watching (2025-11-20)
+- 🔄 **Auto-Reload**: Automatically reloads when markdown files change on disk
+- 📍 **Scroll Preservation**: Maintains scroll position after reload
+- 🗑️ **Deletion Handling**: Gracefully handles file deletion with visual feedback
+- ⚙️ **Configurable**: Debouncing and enable/disable options in config
+- 🧪 **Tested**: Comprehensive test coverage for all file watching scenarios
+
+### v0.6.0 - Visual Polish & Shortcuts (2025-11-19)
+- 🎨 **Version Badge**: Sky blue badge with version number in top-right corner
+- ⌨️ **Global Shortcuts**: Cmd+T (top), Cmd+B (bottom), Cmd+Q (quit)
+- 🔍 **Font Size Controls**: Cmd+= to increase, Cmd+- to decrease font size
+- 📐 **Dynamic Scroll**: Scroll bounds recompute when font size changes
 - **Search Functionality**: Full text search with highlighting and navigation
 - **CLI Arguments**: Accept file path as command-line argument with fallback to README.md/TODO.md
 - **File Validation**: Proper error handling for missing or invalid files

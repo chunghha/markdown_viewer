@@ -20,6 +20,9 @@ The core infrastructure has been **fully implemented and tested**. The applicati
 - [x] **Comprehensive Testing**: 65 tests covering all functionality
 - [x] **Documentation Update**: Updated all project documentation
 - [x] **File Watching**: Auto-reload on file changes with scroll position preservation
+- [x] **Responsive Table Layout**: Dynamic column widths with minimum width enforcement
+- [x] **Table Header Polish**: Improved styling with warmer background color
+- [x] **Layout Bug Fixes**: Corrected viewport width propagation for accurate resizing
 
 ## Next Development Phases 🚀
 
@@ -42,7 +45,7 @@ The core infrastructure has been **fully implemented and tested**. The applicati
 - [x] **Tables**
   - [x] Basic table rendering
   - [x] Column alignment support
-  - [ ] Responsive table layout
+  - [x] Responsive table layout
 
 - [x] **Code Blocks**
   - [x] Syntax highlighting for common languages

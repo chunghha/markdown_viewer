@@ -45,6 +45,7 @@ struct MarkdownViewer {
     markdown_file_path: PathBuf,
     scroll_state: ScrollState,
     viewport_height: f32,
+    viewport_width: f32,
     config: AppConfig,
     image_cache: HashMap<String, ImageState>,
     /// Per-image displayed heights (in pixels) used to compute content height for scrolling.
@@ -380,13 +381,18 @@ impl Render for MarkdownViewer {
             }
         }
 
-        // Update viewport height if changed
-        let current_height = window.viewport_size().height;
-        let current_height_f32 = f32::from(current_height);
+        // Update viewport dimensions if changed
+        let viewport_size = window.viewport_size();
+        let current_height_f32 = f32::from(viewport_size.height);
+        let current_width_f32 = f32::from(viewport_size.width);
 
         if (current_height_f32 - self.viewport_height).abs() > 1.0 {
             self.viewport_height = current_height_f32;
             self.recompute_max_scroll();
+        }
+
+        if (current_width_f32 - self.viewport_width).abs() > 1.0 {
+            self.viewport_width = current_width_f32;
         }
 
         let arena = Arena::new();
@@ -663,6 +669,7 @@ impl Render for MarkdownViewer {
                             root,
                             Some(&self.markdown_file_path),
                             self.search_state.as_ref(),
+                            self.viewport_width,
                             cx,
                             &mut |path| {
                                 if let Some(ImageState::Loaded(src)) = self.image_cache.get(path) {
@@ -879,10 +886,11 @@ fn main() -> Result<()> {
                     let focus_handle = cx.focus_handle();
                     let mut viewer = MarkdownViewer {
                         markdown_content: markdown_input.clone(),
-                        markdown_file_path: file_path_buf.clone(),
+                        markdown_file_path: file_path_buf,
                         scroll_state: ScrollState::new(),
                         viewport_height: window_config.window.height,
-                        config: window_config.clone(),
+                        viewport_width: window_config.window.width,
+                        config: window_config,
                         image_cache: HashMap::new(),
                         image_display_heights: HashMap::new(),
                         bg_rt: bg_rt.clone(),

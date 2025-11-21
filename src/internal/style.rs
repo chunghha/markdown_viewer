@@ -122,13 +122,19 @@ pub const TABLE_BORDER_COLOR: Rgba = Rgba {
 };
 
 pub const TABLE_HEADER_BG: Rgba = Rgba {
-    r: 0.15,
-    g: 0.15,
-    b: 0.15,
+    r: 0.96,
+    g: 0.94,
+    b: 0.90,
     a: 1.0,
 };
 
 pub const TABLE_CELL_PADDING: f32 = 8.0;
+
+/// Minimum width for table columns to ensure readability
+pub const MIN_COLUMN_WIDTH: f32 = 150.0;
+
+/// Total horizontal padding for tables (left + right margins/padding)
+pub const TABLE_HORIZONTAL_PADDING: f32 = 32.0;
 
 // ---- Text Sizes ------------------------------------------------------------
 
