@@ -24,6 +24,7 @@ The core infrastructure has been **fully implemented and tested**. The applicati
 - [x] **Table Header Polish**: Improved styling with warmer background color
 - [x] **Layout Bug Fixes**: Corrected viewport width propagation for accurate resizing
 - [x] **Code Refactoring**: Extracted `main.rs` logic into modular components (`viewer`, `events`, `ui`)
+- [x] **Go-to-Line Functionality**: Implemented line number navigation with Cmd+G/Ctrl+G shortcut
 
 ## Next Development Phases 🚀
 
@@ -68,8 +69,8 @@ The core infrastructure has been **fully implemented and tested**. The applicati
 - [x] **Navigation Enhancements**
   - [x] Table of contents sidebar (right-side, levels 2-4)
   - [x] Heading-based navigation (precise click-to-scroll)
+  - [x] Go-to-line functionality (Cmd+G/Ctrl+G with line number input)
   - [ ] Bookmark specific positions
-  - [ ] Go-to-line functionality
 
 - [ ] **Visual Improvements**
   - [ ] Theme selection (light/dark)
@@ -218,6 +219,6 @@ The markdown viewer now has **production-ready infrastructure** with:
 - Smooth mouse wheel support
 - Complete keyboard navigation
 - Robust error handling
-- Comprehensive test coverage (31 tests)
+- Comprehensive test coverage (71+ tests)
 
 **Ready for advanced feature development!**

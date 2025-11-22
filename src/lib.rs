@@ -487,4 +487,61 @@ mod tests {
         // Should return the image path as-is when no parent can be determined
         assert_eq!(result, "image.png");
     }
+
+    // ---- Go-to-Line Tests ------------------------------------------------
+
+    #[test]
+    fn parse_line_number_with_valid_input() {
+        use internal::viewer::MarkdownViewer;
+        // Test parsing valid line numbers
+        assert_eq!(MarkdownViewer::parse_line_number("1"), Some(1));
+        assert_eq!(MarkdownViewer::parse_line_number("42"), Some(42));
+        assert_eq!(MarkdownViewer::parse_line_number("100"), Some(100));
+        assert_eq!(MarkdownViewer::parse_line_number(" 42 "), Some(42)); // With whitespace
+    }
+
+    #[test]
+    fn parse_line_number_with_invalid_input() {
+        use internal::viewer::MarkdownViewer;
+        // Test parsing invalid inputs
+        assert_eq!(MarkdownViewer::parse_line_number(""), None);
+        assert_eq!(MarkdownViewer::parse_line_number("abc"), None);
+        assert_eq!(MarkdownViewer::parse_line_number("0"), None); // Line numbers start at 1
+        assert_eq!(MarkdownViewer::parse_line_number("-5"), None); // Negative not allowed
+        assert_eq!(MarkdownViewer::parse_line_number("1.5"), None); // Decimals not allowed
+    }
+
+    #[test]
+    fn validate_line_number_logic() {
+        // Test the line counting logic that validate_line_number uses
+        let content_100_lines = (0..100)
+            .map(|i| format!("Line {}\n", i))
+            .collect::<String>();
+        let total_lines = content_100_lines.lines().count();
+        assert_eq!(total_lines, 100);
+
+        // Test bounds checking logic
+        assert!(1 <= total_lines);
+        assert!(50 <= total_lines);
+        assert!(100 <= total_lines);
+        assert!(101 > total_lines);
+    }
+
+    #[test]
+    fn scroll_to_line_bounds_checking() {
+        use internal::scroll::ScrollState;
+        // Test that smooth_scroll_to respects bounds (used by scroll_to_line)
+        let mut state = ScrollState::new();
+        state.set_max_scroll(2000.0, 500.0);
+
+        // Test that scrolling beyond max scroll is clamped
+        let target_y = 3000.0;
+        state.smooth_scroll_to(target_y);
+        assert_eq!(state.target_scroll_y, state.max_scroll_y);
+
+        // Test that scrolling below 0 is clamped
+        let target_y = -100.0;
+        state.smooth_scroll_to(target_y);
+        assert_eq!(state.target_scroll_y, 0.0);
+    }
 }

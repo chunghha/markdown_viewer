@@ -1,7 +1,10 @@
 use gpui::{FontWeight, IntoElement, Rgba, div, prelude::*, px};
 
 use crate::internal::help_overlay::help_panel;
-use crate::internal::style::{VERSION_BADGE_BG_COLOR, VERSION_BADGE_TEXT_COLOR};
+use crate::internal::style::{
+    GOTO_LINE_OVERLAY_BG_COLOR, GOTO_LINE_OVERLAY_TEXT_COLOR, VERSION_BADGE_BG_COLOR,
+    VERSION_BADGE_TEXT_COLOR,
+};
 use crate::internal::viewer::MarkdownViewer;
 
 pub fn render_version_badge() -> impl IntoElement {
@@ -55,6 +58,45 @@ pub fn render_search_overlay(viewer: &MarkdownViewer) -> Option<impl IntoElement
                 .py_2()
                 .text_size(px(14.0))
                 .child(match_info),
+        )
+    } else {
+        None
+    }
+}
+
+pub fn render_goto_line_overlay(viewer: &MarkdownViewer) -> Option<impl IntoElement> {
+    if viewer.show_goto_line {
+        let total_lines = viewer.markdown_content.lines().count();
+        let display_text = if viewer.goto_line_input.is_empty() {
+            format!("Go to line: (1-{})", total_lines)
+        } else {
+            // Validate the input
+            if let Some(line_number) = MarkdownViewer::parse_line_number(&viewer.goto_line_input) {
+                if line_number > total_lines {
+                    format!(
+                        "Go to line: \"{}\" (exceeds max: {})",
+                        viewer.goto_line_input, total_lines
+                    )
+                } else {
+                    format!("Go to line: \"{}\"", viewer.goto_line_input)
+                }
+            } else {
+                format!("Go to line: \"{}\" (invalid)", viewer.goto_line_input)
+            }
+        };
+
+        Some(
+            div()
+                .absolute()
+                .top_0()
+                .left_0()
+                .right_0()
+                .bg(GOTO_LINE_OVERLAY_BG_COLOR)
+                .text_color(GOTO_LINE_OVERLAY_TEXT_COLOR)
+                .px_4()
+                .py_2()
+                .text_size(px(14.0))
+                .child(display_text),
         )
     } else {
         None

@@ -43,6 +43,26 @@ pub fn handle_key_down(
         return;
     }
 
+    // Check for Cmd+G (macOS) or Ctrl+G (other platforms) to toggle go-to-line
+    if event.keystroke.key.as_str() == "g"
+        && (event.keystroke.modifiers.platform || event.keystroke.modifiers.control)
+    {
+        debug!("Go-to-line shortcut triggered (Cmd/Ctrl+G)");
+        if viewer.show_goto_line {
+            // Exit go-to-line mode
+            debug!("Exiting go-to-line mode");
+            viewer.show_goto_line = false;
+            viewer.goto_line_input.clear();
+        } else {
+            // Enter go-to-line mode
+            debug!("Entering go-to-line mode");
+            viewer.show_goto_line = true;
+            viewer.goto_line_input.clear();
+        }
+        cx.notify();
+        return;
+    }
+
     // Handle global shortcuts (Cmd+T, Cmd+B, Cmd+Q, Cmd+=, Cmd+-, Cmd+H)
     if event.keystroke.modifiers.platform {
         match event.keystroke.key.as_str() {
@@ -166,6 +186,64 @@ pub fn handle_key_down(
                 debug!("Search query: '{}'", viewer.search_input);
                 viewer.scroll_to_current_match();
                 cx.notify();
+                return;
+            }
+            _ => {}
+        }
+    }
+
+    // Handle go-to-line mode input
+    if viewer.show_goto_line {
+        match event.keystroke.key.as_str() {
+            "escape" => {
+                // Exit go-to-line mode
+                debug!("Exiting go-to-line mode (Escape)");
+                viewer.show_goto_line = false;
+                viewer.goto_line_input.clear();
+                cx.notify();
+                return;
+            }
+            "enter" => {
+                // Execute go-to-line
+                debug!("Go-to-line execute: '{}'", viewer.goto_line_input);
+                if let Some(line_number) =
+                    MarkdownViewer::parse_line_number(&viewer.goto_line_input)
+                {
+                    match viewer.scroll_to_line(line_number) {
+                        Ok(()) => {
+                            debug!("Scrolled to line {}", line_number);
+                            viewer.show_goto_line = false;
+                            viewer.goto_line_input.clear();
+                        }
+                        Err(e) => {
+                            debug!("Failed to scroll to line {}: {}", line_number, e);
+                            // Keep dialog open to show error (could add error message display later)
+                        }
+                    }
+                } else {
+                    debug!("Invalid line number: '{}'", viewer.goto_line_input);
+                    // Keep dialog open for invalid input
+                }
+                cx.notify();
+                return;
+            }
+            "backspace" => {
+                // Remove last character
+                viewer.goto_line_input.pop();
+                debug!("Go-to-line input: '{}'", viewer.goto_line_input);
+                cx.notify();
+                return;
+            }
+            key if key.len() == 1
+                && !event.keystroke.modifiers.control
+                && !event.keystroke.modifiers.platform =>
+            {
+                // Add character to input (only digits)
+                if key.chars().next().is_some_and(|c| c.is_ascii_digit()) {
+                    viewer.goto_line_input.push_str(key);
+                    debug!("Go-to-line input: '{}'", viewer.goto_line_input);
+                    cx.notify();
+                }
                 return;
             }
             _ => {}

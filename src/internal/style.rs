@@ -231,3 +231,21 @@ pub const TOC_TOGGLE_HOVER_COLOR: Rgba = Rgba {
     b: 0.878,
     a: 1.0,
 };
+
+// ---- Go-to-Line Overlay Styling -----------------------------------------
+
+/// Background color for go-to-line overlay (light cyan/blue)
+pub const GOTO_LINE_OVERLAY_BG_COLOR: Rgba = Rgba {
+    r: 0.6,
+    g: 0.95,
+    b: 1.0,
+    a: 0.95,
+};
+
+/// Text color for go-to-line overlay
+pub const GOTO_LINE_OVERLAY_TEXT_COLOR: Rgba = Rgba {
+    r: 0.0,
+    g: 0.0,
+    b: 0.0,
+    a: 1.0,
+};

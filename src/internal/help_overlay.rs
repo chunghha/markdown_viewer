@@ -70,6 +70,7 @@ pub fn help_panel() -> impl IntoElement {
                         .child(shortcut_row("Cmd + H", "Toggle Help"))
                         .child(shortcut_row("Cmd + Z", "Toggle TOC"))
                         .child(shortcut_row("Cmd + F", "Search"))
+                        .child(shortcut_row("Cmd + G", "Go to Line"))
                         .child(shortcut_row("Cmd + T", "Scroll to Top"))
                         .child(shortcut_row("Cmd + B", "Scroll to Bottom"))
                         .child(shortcut_row("Cmd + +", "Increase Font Size"))

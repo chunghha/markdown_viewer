@@ -41,6 +41,7 @@ A desktop Markdown viewer built with Rust and GPUI, featuring advanced scrolling
 - **Search**: `Cmd+F` (macOS) or `Ctrl+F` to toggle search
 - **Search Navigation**: `Enter` (next), `Shift+Enter` (previous)
 - **Exit Search**: `Escape` to clear search and return to document
+- **Go to Line**: `Cmd+G` (macOS) or `Ctrl+G` to open go-to-line dialog, then enter line number and press `Enter`
 - **Quick Navigation**: `Cmd+T` (Top), `Cmd+B` (Bottom)
 - **Application**: `Cmd+Q` to quit
 - **Toggle Help Overlay**: `Cmd+H` to toggle help overlay for showing shortcuts
@@ -248,6 +249,15 @@ markdown_viewer/
 - **Fixed Mouse Wheel Direction**: Proper handling of scroll up/down events
 - **Bounds Enforcement**: Eliminated scrolling beyond document boundaries
 - **Content Height**: Accurate estimation prevents content cutoff
+
+### v0.8.1 - Go-to-Line Functionality (2025-11-22)
+- **Go-to-Line Dialog**: Press `Cmd+G` (macOS) or `Ctrl+G` to open go-to-line dialog
+- **Line Number Input**: Type a line number and press `Enter` to jump to that line
+- **Input Validation**: Only accepts numeric input with bounds checking against total line count
+- **Visual Feedback**: Blue overlay shows current input and validation status
+- **Immediate Scrolling**: Instantly scrolls to target line, centered in viewport
+- **Error Handling**: Helpful error messages for invalid line numbers
+- **Help Integration**: Added go-to-line shortcut to help overlay
 
 ### v0.8.0 - Table of Contents Navigation (2025-11-22)
 - **TOC Sidebar**: Right-side hierarchical navigation for headings (levels 2-4)

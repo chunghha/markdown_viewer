@@ -74,6 +74,10 @@ pub struct MarkdownViewer {
     pub toc_scroll_y: f32,
     /// TOC sidebar maximum scroll position
     pub toc_max_scroll_y: f32,
+    /// Whether go-to-line dialog is active
+    pub show_goto_line: bool,
+    /// Current go-to-line input text
+    pub goto_line_input: String,
 }
 
 impl MarkdownViewer {
@@ -119,6 +123,8 @@ impl MarkdownViewer {
             toc,
             toc_scroll_y: 0.0,
             toc_max_scroll_y: 0.0,
+            show_goto_line: false,
+            goto_line_input: String::new(),
         };
 
         viewer.recompute_max_scroll();
@@ -216,6 +222,42 @@ impl MarkdownViewer {
         let (height, _) = self.calculate_smart_height(Some(line_number));
         // Add top padding
         height + 32.0 // CONTAINER_PADDING
+    }
+
+    /// Parse a line number from input string
+    /// Returns None if the input is invalid (empty, non-numeric, zero, or negative)
+    pub fn parse_line_number(input: &str) -> Option<usize> {
+        input.trim().parse::<usize>().ok().filter(|&n| n > 0)
+    }
+
+    /// Validate that a line number is within bounds
+    /// Returns an error message if the line number is invalid
+    pub fn validate_line_number(&self, line_number: usize) -> Result<(), String> {
+        let total_lines = self.markdown_content.lines().count();
+        if line_number == 0 {
+            return Err("Line number must be greater than 0".to_string());
+        }
+        if line_number > total_lines {
+            return Err(format!(
+                "Line number {} exceeds total lines ({})",
+                line_number, total_lines
+            ));
+        }
+        Ok(())
+    }
+
+    /// Scroll to a specific line number
+    /// Centers the line in the viewport if possible
+    pub fn scroll_to_line(&mut self, line_number: usize) -> Result<(), String> {
+        self.validate_line_number(line_number)?;
+
+        let target_y = self.calculate_y_for_line(line_number - 1); // Convert to 0-based
+        // Center the line in the viewport
+        let centered_y = (target_y - self.viewport_height / 2.0).max(0.0);
+        // Directly set scroll_y for immediate scrolling (like scroll_to_top/bottom)
+        self.scroll_state.scroll_y = centered_y.min(self.scroll_state.max_scroll_y);
+
+        Ok(())
     }
 
     /// Calculates the height of the content using smart logic (wrapping, images, etc.)
@@ -730,6 +772,13 @@ impl Render for MarkdownViewer {
 
         // Add search indicator overlay if search is active
         let element = if let Some(overlay) = ui::render_search_overlay(self) {
+            element.child(overlay)
+        } else {
+            element
+        };
+
+        // Add go-to-line overlay if active
+        let element = if let Some(overlay) = ui::render_goto_line_overlay(self) {
             element.child(overlay)
         } else {
             element
