@@ -149,7 +149,7 @@ impl Default for ThemeConfig {
             code_font: "monospace".to_string(),
             base_text_size: 19.2,
             line_height_multiplier: 1.5,
-            content_height_buffer: 100.0,
+            content_height_buffer: 200.0,
         }
     }
 }

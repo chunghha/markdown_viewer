@@ -28,7 +28,8 @@ actions!(search, [ToggleSearch, NextMatch, PrevMatch, ExitSearch]);
 /// Estimated vertical spacing (margins + padding) applied around images in the renderer.
 pub const IMAGE_VERTICAL_PADDING: f32 = 16.0;
 /// Height of the placeholder shown when an image is loading or missing
-pub const PLACEHOLDER_HEIGHT: f32 = 120.0;
+/// Set to IMAGE_MAX_WIDTH (800px) to handle worst-case square images (800×800)
+pub const PLACEHOLDER_HEIGHT: f32 = 800.0;
 /// Container padding applied by the renderer (.pt_4() + .pb_4() = ~16px * 2)
 pub const CONTAINER_PADDING: f32 = 32.0;
 
@@ -191,6 +192,7 @@ impl MarkdownViewer {
         let chars_per_line = (self.viewport_width / char_width).max(20.0);
 
         let mut smart_text_height = 0.0;
+        let mut found_image_paths = std::collections::HashSet::new();
 
         for raw_line in self.markdown_content.lines() {
             let line = raw_line.trim_start();
@@ -223,9 +225,14 @@ impl MarkdownViewer {
 
                         if !url.is_empty() {
                             let resolved_path = resolve_image_path(url, &self.markdown_file_path);
+
+                            // Track this image path
+                            found_image_paths.insert(resolved_path.clone());
+
                             if let Some(&height) = self.image_display_heights.get(&resolved_path) {
                                 image_height_on_line += height + IMAGE_VERTICAL_PADDING;
                             } else {
+                                // Use PLACEHOLDER_HEIGHT for unloaded images
                                 image_height_on_line += PLACEHOLDER_HEIGHT + IMAGE_VERTICAL_PADDING;
                             }
                             found_image = true;
@@ -248,7 +255,8 @@ impl MarkdownViewer {
                 blockquote_weight
             } else if line.starts_with('|') {
                 let col_count = line.chars().filter(|c| *c == '|').count().max(2) - 1;
-                1.0 + (col_count as f32 * 0.5)
+                // Reduced from 0.5 to 0.15: 10 cols = 2.5x instead of 6.0x
+                1.0 + (col_count as f32 * 0.15)
             } else if line.starts_with('-')
                 || line.starts_with('*')
                 || line.starts_with('+')
@@ -329,14 +337,39 @@ impl MarkdownViewer {
 
         let legacy_total_height = legacy_text_height + legacy_images_height;
 
+        // --- Dynamic Image Buffer ---
+        // Count how many images we found vs how many have loaded heights
+        let total_images_found = found_image_paths.len();
+        let loaded_images_count = found_image_paths
+            .iter()
+            .filter(|path| self.image_display_heights.contains_key(*path))
+            .count();
+        let unloaded_images_count = total_images_found.saturating_sub(loaded_images_count);
+
+        // Add 500px per unloaded image (reasonable average height for typical web images)
+        // This is more conservative than PLACEHOLDER_HEIGHT but less than IMAGE_MAX_WIDTH
+        let unloaded_image_buffer = (unloaded_images_count as f32) * 500.0;
+
         // --- Hybrid Result ---
-        // Use the maximum of the two estimates + container padding + buffer
+        // Use the maximum of the two estimates + container padding + base buffer + unloaded image buffer
         // TODO: Revisit this hybrid calculation logic. It's a temporary fix to ensure
         // both text-heavy (wrapping) and image-heavy (legacy) files scroll correctly.
         // Ideally, we should have a single unified logic that handles all cases perfectly.
+
+        debug!(
+            "Scroll calculation: smart={:.1}px, legacy={:.1}px, images={}/{} loaded, unloaded_buffer={:.1}px, using={:.1}px",
+            smart_total_height,
+            legacy_total_height,
+            loaded_images_count,
+            total_images_found,
+            unloaded_image_buffer,
+            f32::max(smart_total_height, legacy_total_height)
+        );
+
         let content_height = f32::max(smart_total_height, legacy_total_height)
             + CONTAINER_PADDING
-            + self.config.theme.content_height_buffer;
+            + self.config.theme.content_height_buffer
+            + unloaded_image_buffer;
 
         self.scroll_state
             .set_max_scroll(content_height, self.viewport_height);
