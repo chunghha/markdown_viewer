@@ -4,6 +4,7 @@
 //! including support for headings, lists, code blocks, tables, and more.
 
 use super::style::*;
+use super::theme::ThemeColors;
 use comrak::nodes::{AstNode, NodeValue};
 use gpui::{
     AnyElement, ClipboardItem, Context, FontWeight, ImageSource, InteractiveElement, IntoElement,
@@ -59,15 +60,18 @@ fn calculate_column_width(num_columns: usize, viewport_width: f32) -> (f32, bool
 fn render_highlighted_code_block<T: 'static>(
     code: String,
     language: String,
+    theme_colors: &ThemeColors,
+    current_theme: super::theme::Theme,
     cx: &mut Context<T>,
 ) -> AnyElement {
     let syntax_set = get_syntax_set();
     let theme_set = get_theme_set();
 
-    // Use "solarized.light" or fallback to first available
+    // Use theme-appropriate syntect theme
+    let syntect_theme_name = current_theme.syntect_theme();
     let theme = theme_set
         .themes
-        .get("solarized.light")
+        .get(syntect_theme_name)
         .or_else(|| theme_set.themes.values().next())
         .unwrap();
 
@@ -98,7 +102,7 @@ fn render_highlighted_code_block<T: 'static>(
         let line_number = div()
             .w_8()
             .mr_4()
-            .text_color(CODE_LINE_COLOR)
+            .text_color(theme_colors.code_line_color)
             .justify_end()
             .flex()
             .child((i + 1).to_string());
@@ -117,8 +121,8 @@ fn render_highlighted_code_block<T: 'static>(
         .absolute()
         .top_2()
         .right_2()
-        .bg(COPY_BUTTON_BG_COLOR)
-        .text_color(COPY_BUTTON_TEXT_COLOR)
+        .bg(theme_colors.copy_button_bg_color)
+        .text_color(theme_colors.copy_button_text_color)
         .px_2()
         .py_1()
         .rounded_md()
@@ -134,7 +138,7 @@ fn render_highlighted_code_block<T: 'static>(
     div()
         .relative()
         .group("code_block")
-        .bg(CODE_BG_COLOR)
+        .bg(theme_colors.code_bg_color)
         .p_3()
         .rounded_md()
         .font_family(CODE_FONT)
@@ -168,11 +172,14 @@ fn collect_text<'a>(node: &'a AstNode<'a>) -> String {
 /// Render a Markdown AST node to a GPUI element with context
 ///
 /// This internal function accepts an optional markdown file path for resolving relative image paths.
+#[allow(clippy::too_many_arguments)]
 fn render_markdown_ast_internal<'a, T: 'static>(
     node: &'a AstNode<'a>,
     markdown_file_path: Option<&Path>,
     search_state: Option<&super::search::SearchState>,
     viewport_width: f32,
+    theme_colors: &ThemeColors,
+    current_theme: super::theme::Theme,
     cx: &mut Context<T>,
     image_loader: &mut dyn FnMut(&str) -> Option<ImageSource>,
 ) -> AnyElement {
@@ -185,6 +192,8 @@ fn render_markdown_ast_internal<'a, T: 'static>(
                     markdown_file_path,
                     search_state,
                     viewport_width,
+                    theme_colors,
+                    current_theme,
                     cx,
                     image_loader,
                 )
@@ -207,6 +216,8 @@ fn render_markdown_ast_internal<'a, T: 'static>(
                     markdown_file_path,
                     search_state,
                     viewport_width,
+                    theme_colors,
+                    current_theme,
                     cx,
                     image_loader,
                 )
@@ -238,6 +249,8 @@ fn render_markdown_ast_internal<'a, T: 'static>(
                             markdown_file_path,
                             search_state,
                             viewport_width,
+                            theme_colors,
+                            current_theme,
                             cx,
                             image_loader,
                         )
@@ -265,8 +278,8 @@ fn render_markdown_ast_internal<'a, T: 'static>(
 
         NodeValue::Code(code) => div()
             .font_family(CODE_FONT)
-            .bg(CODE_BG_COLOR)
-            .text_color(TEXT_COLOR)
+            .bg(theme_colors.code_bg_color)
+            .text_color(theme_colors.text_color)
             .px_1()
             .rounded_sm()
             .child(String::from_utf8_lossy(code.literal.as_bytes()).to_string())
@@ -275,7 +288,7 @@ fn render_markdown_ast_internal<'a, T: 'static>(
         NodeValue::CodeBlock(code_block) => {
             let language = code_block.info.clone();
             let code = code_block.literal.clone();
-            render_highlighted_code_block(code, language, cx)
+            render_highlighted_code_block(code, language, theme_colors, current_theme, cx)
         }
 
         NodeValue::List(list) => {
@@ -291,6 +304,8 @@ fn render_markdown_ast_internal<'a, T: 'static>(
                         markdown_file_path,
                         search_state,
                         viewport_width,
+                        theme_colors,
+                        current_theme,
                         cx,
                         image_loader,
                     )
@@ -372,11 +387,13 @@ fn render_markdown_ast_internal<'a, T: 'static>(
                             .mb_2()
                             .child("🖼️ Image"),
                     )
-                    .child(div().text_color(TEXT_COLOR).child(if !alt_text.is_empty() {
-                        alt_text
-                    } else {
-                        "Image".to_string()
-                    }))
+                    .child(div().text_color(theme_colors.text_color).child(
+                        if !alt_text.is_empty() {
+                            alt_text
+                        } else {
+                            "Image".to_string()
+                        },
+                    ))
                     .child(
                         div()
                             .text_size(px(12.0))
@@ -405,17 +422,17 @@ fn render_markdown_ast_internal<'a, T: 'static>(
             // that opens the URL in the system browser.
             if url.trim().is_empty() {
                 div()
-                    .text_color(TEXT_COLOR)
+                    .text_color(theme_colors.text_color)
                     .child(link_text)
                     .into_any_element()
             } else {
                 // clickable
                 let click_url = url.clone();
                 div()
-                    .text_color(LINK_COLOR)
+                    .text_color(theme_colors.link_color)
                     .underline()
                     .cursor_pointer()
-                    .hover(|style| style.text_color(HOVER_LINK_COLOR))
+                    .hover(|style| style.text_color(theme_colors.hover_link_color))
                     .id(SharedString::from(url.clone()))
                     .on_mouse_down(
                         MouseButton::Left,
@@ -444,6 +461,8 @@ fn render_markdown_ast_internal<'a, T: 'static>(
                     markdown_file_path,
                     search_state,
                     viewport_width,
+                    theme_colors,
+                    current_theme,
                     cx,
                     image_loader,
                 )
@@ -458,6 +477,8 @@ fn render_markdown_ast_internal<'a, T: 'static>(
                     markdown_file_path,
                     search_state,
                     viewport_width,
+                    theme_colors,
+                    current_theme,
                     cx,
                     image_loader,
                 )
@@ -472,6 +493,8 @@ fn render_markdown_ast_internal<'a, T: 'static>(
                     markdown_file_path,
                     search_state,
                     viewport_width,
+                    theme_colors,
+                    current_theme,
                     cx,
                     image_loader,
                 )
@@ -480,7 +503,7 @@ fn render_markdown_ast_internal<'a, T: 'static>(
 
         NodeValue::BlockQuote => div()
             .border_l_4()
-            .border_color(BLOCKQUOTE_BORDER_COLOR)
+            .border_color(theme_colors.blockquote_border_color)
             .pl_4()
             .italic()
             .children(node.children().map(|child| {
@@ -489,6 +512,8 @@ fn render_markdown_ast_internal<'a, T: 'static>(
                     markdown_file_path,
                     search_state,
                     viewport_width,
+                    theme_colors,
+                    current_theme,
                     cx,
                     image_loader,
                 )
@@ -513,7 +538,7 @@ fn render_markdown_ast_internal<'a, T: 'static>(
                 .w_full()
                 .my_2()
                 .border_1()
-                .border_color(TABLE_BORDER_COLOR)
+                .border_color(theme_colors.table_border_color)
                 .children(node.children().map(|row| {
                     render_table_row(
                         row,
@@ -522,6 +547,8 @@ fn render_markdown_ast_internal<'a, T: 'static>(
                         markdown_file_path,
                         search_state,
                         viewport_width,
+                        theme_colors,
+                        current_theme,
                         cx,
                         image_loader,
                     )
@@ -540,6 +567,8 @@ fn render_markdown_ast_internal<'a, T: 'static>(
                         markdown_file_path,
                         search_state,
                         viewport_width,
+                        theme_colors,
+                        current_theme,
                         cx,
                         image_loader,
                     )
@@ -557,6 +586,8 @@ fn render_markdown_ast_internal<'a, T: 'static>(
                         markdown_file_path,
                         search_state,
                         viewport_width,
+                        theme_colors,
+                        current_theme,
                         cx,
                         image_loader,
                     )
@@ -572,6 +603,8 @@ fn render_markdown_ast_internal<'a, T: 'static>(
                     markdown_file_path,
                     search_state,
                     viewport_width,
+                    theme_colors,
+                    current_theme,
                     cx,
                     image_loader,
                 )
@@ -588,10 +621,21 @@ fn render_markdown_ast_internal<'a, T: 'static>(
 /// This is the simplest rendering function that uses default settings.
 pub fn render_markdown_ast<'a, T: 'static>(
     node: &'a AstNode<'a>,
+    theme_colors: &ThemeColors,
+    current_theme: super::theme::Theme,
     cx: &mut Context<T>,
 ) -> AnyElement {
     const DEFAULT_VIEWPORT_WIDTH: f32 = 1200.0;
-    render_markdown_ast_internal(node, None, None, DEFAULT_VIEWPORT_WIDTH, cx, &mut |_| None)
+    render_markdown_ast_internal(
+        node,
+        None,
+        None,
+        DEFAULT_VIEWPORT_WIDTH,
+        theme_colors,
+        current_theme,
+        cx,
+        &mut |_| None,
+    )
 }
 
 /// Render a Markdown AST node to a GPUI element with markdown file path context
@@ -600,6 +644,8 @@ pub fn render_markdown_ast<'a, T: 'static>(
 pub fn render_markdown_ast_with_loader<'a, T: 'static>(
     node: &'a AstNode<'a>,
     markdown_file_path: Option<&Path>,
+    theme_colors: &ThemeColors,
+    current_theme: super::theme::Theme,
     cx: &mut Context<T>,
     image_loader: &mut dyn FnMut(&str) -> Option<ImageSource>,
 ) -> AnyElement {
@@ -609,6 +655,8 @@ pub fn render_markdown_ast_with_loader<'a, T: 'static>(
         markdown_file_path,
         None,
         DEFAULT_VIEWPORT_WIDTH,
+        theme_colors,
+        current_theme,
         cx,
         image_loader,
     )
@@ -617,11 +665,14 @@ pub fn render_markdown_ast_with_loader<'a, T: 'static>(
 /// Render a Markdown AST node to a GPUI element with search highlighting
 ///
 /// This version accepts search state to highlight matching text.
+#[allow(clippy::too_many_arguments)]
 pub fn render_markdown_ast_with_search<'a, T: 'static>(
     node: &'a AstNode<'a>,
     markdown_file_path: Option<&Path>,
     search_state: Option<&super::search::SearchState>,
     viewport_width: f32,
+    theme_colors: &ThemeColors,
+    current_theme: super::theme::Theme,
     cx: &mut Context<T>,
     image_loader: &mut dyn FnMut(&str) -> Option<ImageSource>,
 ) -> AnyElement {
@@ -630,6 +681,8 @@ pub fn render_markdown_ast_with_search<'a, T: 'static>(
         markdown_file_path,
         search_state,
         viewport_width,
+        theme_colors,
+        current_theme,
         cx,
         image_loader,
     )
@@ -644,6 +697,8 @@ fn render_table_row<'a, T: 'static>(
     markdown_file_path: Option<&Path>,
     search_state: Option<&super::search::SearchState>,
     viewport_width: f32,
+    theme_colors: &ThemeColors,
+    current_theme: super::theme::Theme,
     cx: &mut Context<T>,
     image_loader: &mut dyn FnMut(&str) -> Option<ImageSource>,
 ) -> AnyElement {
@@ -656,7 +711,9 @@ fn render_table_row<'a, T: 'static>(
         .border_color(TABLE_BORDER_COLOR);
 
     if is_header {
-        row_div = row_div.bg(TABLE_HEADER_BG).font_weight(FontWeight::BOLD);
+        row_div = row_div
+            .bg(theme_colors.table_header_bg)
+            .font_weight(FontWeight::BOLD);
     }
 
     // Render cells with alignment and calculated width
@@ -671,6 +728,8 @@ fn render_table_row<'a, T: 'static>(
                 markdown_file_path,
                 search_state,
                 viewport_width,
+                theme_colors,
+                current_theme,
                 cx,
                 image_loader,
             )
@@ -689,6 +748,8 @@ fn render_table_cell<'a, T: 'static>(
     markdown_file_path: Option<&Path>,
     search_state: Option<&super::search::SearchState>,
     viewport_width: f32,
+    theme_colors: &ThemeColors,
+    current_theme: super::theme::Theme,
     cx: &mut Context<T>,
     image_loader: &mut dyn FnMut(&str) -> Option<ImageSource>,
 ) -> AnyElement {
@@ -718,6 +779,8 @@ fn render_table_cell<'a, T: 'static>(
                 markdown_file_path,
                 search_state,
                 viewport_width,
+                theme_colors,
+                current_theme,
                 cx,
                 image_loader,
             )

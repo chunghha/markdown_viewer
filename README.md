@@ -46,6 +46,7 @@ A desktop Markdown viewer built with Rust and GPUI, featuring advanced scrolling
 - **Application**: `Cmd+Q` to quit
 - **Toggle Help Overlay**: `Cmd+H` to toggle help overlay for showing shortcuts
 - **Toggle TOC**: `Cmd+Z` to toggle Table of Contents sidebar
+- **Toggle Theme**: `Cmd+Shift+T` to toggle between Light and Dark themes
 - **Arrow Keys**: `↑`/`↓` for 20px incremental scrolling
 - **Page Navigation**: `Page Up`/`Page Down` for 80% viewport scrolling
 - **Document Navigation**: `Home`/`End` for jumping to top/bottom
@@ -221,7 +222,7 @@ cargo fmt
 - **Responsive**: 60 FPS scrolling with large documents
 
 ### Code Quality
-- **65 Unit Tests**: Comprehensive test coverage for scrolling, file handling, configuration, format validation, table rendering, and file watching
+- **71 Unit Tests**: Comprehensive test coverage for scrolling, file handling, configuration, format validation, table rendering, file watching, and theme system
 - **Clippy Clean**: Passes all Rust linting checks
 - **Well Documented**: Inline documentation and implementation guides
 
@@ -249,6 +250,13 @@ markdown_viewer/
 - **Fixed Mouse Wheel Direction**: Proper handling of scroll up/down events
 - **Bounds Enforcement**: Eliminated scrolling beyond document boundaries
 - **Content Height**: Accurate estimation prevents content cutoff
+
+### v0.9.0 - Theme System (2025-11-22)
+- **Light/Dark Themes**: Complete theme system with Light (default) and Dark variants
+- **Theme Toggle**: Press `Cmd+Shift+T` to toggle between themes instantly
+- **Theme Persistence**: Selected theme is saved to config and restored on app launch
+- **Comprehensive Colors**: All UI elements (text, code, TOC, overlays) adapt to theme
+- **Code Quality**: Enhanced with derive macros and comprehensive theme test coverage
 
 ### v0.8.1 - Go-to-Line Functionality (2025-11-22)
 - **Go-to-Line Dialog**: Press `Cmd+G` (macOS) or `Ctrl+G` to open go-to-line dialog
@@ -305,7 +313,7 @@ markdown_viewer/
 ### Code Quality
 - **Meaningful Constants**: Extracted magic numbers to named constants
 - **Enhanced Documentation**: Updated all project documentation
-- **Test Coverage**: 65 tests covering scrolling, file handling, configuration, validation, and file watching
+- **Test Coverage**: 71 tests covering scrolling, file handling, configuration, validation, file watching, and theme system
 - **Safe Tests**: File-manipulating tests now preserve project files
 
 ## Development Philosophy
@@ -345,8 +353,7 @@ task pre-commit
 ## Future Enhancements
 
 - **Configuration UI**: In-app settings panel
-- **Navigation Enhancements**: Table of contents sidebar, heading-based navigation
-- **Theme System**: Multiple color schemes and custom themes
+- **Theme System Extensions**: Custom themes and additional color schemes
 - **Export Options**: PDF/HTML export functionality
 - **Performance**: Lazy loading for very large files
 

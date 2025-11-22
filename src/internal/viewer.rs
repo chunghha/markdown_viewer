@@ -19,7 +19,7 @@ use crate::internal::image_loader::fetch_and_decode_image;
 use crate::internal::rendering::render_markdown_ast_with_search;
 use crate::internal::scroll::ScrollState;
 use crate::internal::search::SearchState;
-use crate::internal::style::{BG_COLOR, IMAGE_MAX_WIDTH, TEXT_COLOR};
+use crate::internal::style::{IMAGE_MAX_WIDTH, get_theme_colors};
 use crate::internal::ui;
 
 // Define search actions
@@ -669,13 +669,14 @@ impl Render for MarkdownViewer {
         let root = parse_document(&arena, &self.markdown_content, &options);
 
         let mut missing_images = HashSet::new();
+        let theme_colors = get_theme_colors(self.config.theme.theme);
         let element = div()
             .track_focus(&self.focus_handle)
             .flex()
             .relative() // Ensure absolute children are positioned relative to this container
             .size_full()
-            .bg(BG_COLOR)
-            .text_color(TEXT_COLOR)
+            .bg(theme_colors.bg_color)
+            .text_color(theme_colors.text_color)
             .font_family(self.config.theme.primary_font.clone())
             .text_size(px(self.config.theme.base_text_size))
             // New: Event handlers for scrolling
@@ -753,6 +754,8 @@ impl Render for MarkdownViewer {
                             } else {
                                 self.viewport_width - 64.0
                             },
+                            &theme_colors,
+                            self.config.theme.theme,
                             cx,
                             &mut |path| {
                                 if let Some(ImageState::Loaded(src)) = self.image_cache.get(path) {
@@ -785,7 +788,7 @@ impl Render for MarkdownViewer {
         };
 
         // Help Overlay
-        let element = if let Some(overlay) = ui::render_help_overlay(self) {
+        let element = if let Some(overlay) = ui::render_help_overlay(self, &theme_colors) {
             element.child(overlay)
         } else {
             element
@@ -799,7 +802,7 @@ impl Render for MarkdownViewer {
         };
 
         // TOC Sidebar
-        let element = if let Some(sidebar) = ui::render_toc_sidebar(self, cx) {
+        let element = if let Some(sidebar) = ui::render_toc_sidebar(self, &theme_colors, cx) {
             element.child(sidebar)
         } else {
             element

@@ -103,7 +103,10 @@ pub fn render_goto_line_overlay(viewer: &MarkdownViewer) -> Option<impl IntoElem
     }
 }
 
-pub fn render_help_overlay(viewer: &MarkdownViewer) -> Option<impl IntoElement> {
+pub fn render_help_overlay(
+    viewer: &MarkdownViewer,
+    theme_colors: &crate::internal::theme::ThemeColors,
+) -> Option<impl IntoElement> {
     if viewer.show_help {
         Some(
             div()
@@ -121,7 +124,7 @@ pub fn render_help_overlay(viewer: &MarkdownViewer) -> Option<impl IntoElement> 
                 .flex()
                 .items_center()
                 .justify_center()
-                .child(help_panel()),
+                .child(help_panel(theme_colors)),
         )
     } else {
         None
@@ -161,16 +164,14 @@ pub fn render_file_deleted_overlay(viewer: &MarkdownViewer) -> Option<impl IntoE
 
 pub fn render_toc_sidebar(
     viewer: &MarkdownViewer,
+    theme_colors: &crate::internal::theme::ThemeColors,
     cx: &mut gpui::Context<MarkdownViewer>,
 ) -> Option<impl IntoElement> {
     if !viewer.show_toc || viewer.toc.entries.is_empty() {
         return None;
     }
 
-    use crate::internal::style::{
-        TOC_ACTIVE_COLOR, TOC_BG_COLOR, TOC_BORDER_COLOR, TOC_HOVER_COLOR, TOC_INDENT_PER_LEVEL,
-        TOC_TEXT_COLOR, TOC_WIDTH,
-    };
+    use crate::internal::style::{TOC_INDENT_PER_LEVEL, TOC_WIDTH};
 
     let avg_line_height =
         viewer.config.theme.base_text_size * viewer.config.theme.line_height_multiplier;
@@ -192,10 +193,10 @@ pub fn render_toc_sidebar(
                 .px(px(8.0 + indent))
                 .py_1()
                 .text_size(px(13.0))
-                .text_color(TOC_TEXT_COLOR)
+                .text_color(theme_colors.toc_text_color)
                 .cursor_pointer()
-                .when(is_active, |div| div.bg(TOC_ACTIVE_COLOR))
-                .hover(|div| div.bg(TOC_HOVER_COLOR))
+                .when(is_active, |div| div.bg(theme_colors.toc_active_color))
+                .hover(|div| div.bg(theme_colors.toc_hover_color))
                 .on_mouse_down(
                     gpui::MouseButton::Left,
                     cx.listener(move |this, _event, _, cx| {
@@ -216,9 +217,9 @@ pub fn render_toc_sidebar(
             .right_0()
             .bottom_0()
             .w(px(TOC_WIDTH))
-            .bg(TOC_BG_COLOR)
+            .bg(theme_colors.toc_bg_color)
             .border_l_1()
-            .border_color(TOC_BORDER_COLOR)
+            .border_color(theme_colors.toc_border_color)
             .overflow_hidden()
             .on_scroll_wheel(cx.listener(|this, event: &gpui::ScrollWheelEvent, _, cx| {
                 let delta = event

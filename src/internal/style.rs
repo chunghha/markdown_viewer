@@ -3,6 +3,7 @@
 //! This module contains all visual styling constants including colors,
 //! fonts, sizes, and spacing values.
 
+use super::theme::{Theme, ThemeColors};
 use gpui::Rgba;
 
 // ---- Fonts -----------------------------------------------------------------
@@ -249,3 +250,13 @@ pub const GOTO_LINE_OVERLAY_TEXT_COLOR: Rgba = Rgba {
     b: 0.0,
     a: 1.0,
 };
+
+// ---- Theme-based Color Access -----------------------------------------
+
+/// Get theme colors for the given theme
+///
+/// This function provides access to all colors based on the active theme.
+/// Prefer using this over the individual color constants when theme support is needed.
+pub fn get_theme_colors(theme: Theme) -> ThemeColors {
+    ThemeColors::from(theme)
+}

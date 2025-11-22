@@ -17,7 +17,7 @@ The core infrastructure has been **fully implemented and tested**. The applicati
 - [x] **Search Functionality**: Implemented full text search with highlighting and navigation
 - [x] **Global Shortcuts**: Added Cmd+T/B/Q and font size controls
 - [x] **Visual Polish**: Added version badge and refined styling
-- [x] **Comprehensive Testing**: 65 tests covering all functionality
+- [x] **Comprehensive Testing**: 77 tests covering all functionality
 - [x] **Documentation Update**: Updated all project documentation
 - [x] **File Watching**: Auto-reload on file changes with scroll position preservation
 - [x] **Responsive Table Layout**: Dynamic column widths with minimum width enforcement
@@ -25,6 +25,8 @@ The core infrastructure has been **fully implemented and tested**. The applicati
 - [x] **Layout Bug Fixes**: Corrected viewport width propagation for accurate resizing
 - [x] **Code Refactoring**: Extracted `main.rs` logic into modular components (`viewer`, `events`, `ui`)
 - [x] **Go-to-Line Functionality**: Implemented line number navigation with Cmd+G/Ctrl+G shortcut
+- [x] **Table of Contents Navigation**: Right-side TOC sidebar with hierarchical navigation (levels 2-4)
+- [x] **Theme System**: Light/Dark themes with Cmd+Shift+T toggle and persistence
 
 ## Next Development Phases 🚀
 
@@ -72,8 +74,8 @@ The core infrastructure has been **fully implemented and tested**. The applicati
   - [x] Go-to-line functionality (Cmd+G/Ctrl+G with line number input)
   - [ ] Bookmark specific positions
 
-- [ ] **Visual Improvements**
-  - [ ] Theme selection (light/dark)
+- [x] **Visual Improvements**
+  - [x] Theme selection (light/dark with Cmd+Shift+T toggle)
   - [x] Font size adjustment
   - [ ] Custom CSS styling support
   - [ ] Print preview mode
@@ -219,6 +221,6 @@ The markdown viewer now has **production-ready infrastructure** with:
 - Smooth mouse wheel support
 - Complete keyboard navigation
 - Robust error handling
-- Comprehensive test coverage (71+ tests)
+- Comprehensive test coverage (77 tests including theme system)
 
 **Ready for advanced feature development!**

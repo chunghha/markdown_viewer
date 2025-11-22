@@ -17,7 +17,6 @@ can further wrap or style the returned element as needed. This keeps the module 
 on layout and content.
 */
 
-use crate::{BG_COLOR, TEXT_COLOR};
 use gpui::{FontWeight, IntoElement, Rgba, div, prelude::*};
 
 /// Render a single shortcut row: bold key on the left, description on the right.
@@ -37,12 +36,12 @@ pub fn shortcut_row(key: &str, desc: &str) -> impl IntoElement {
 ///
 /// The returned element is meant to be placed inside a styled container by the caller,
 /// for example wrapped with background, shadow, padding, etc.
-pub fn help_panel() -> impl IntoElement {
+pub fn help_panel(theme_colors: &crate::internal::theme::ThemeColors) -> impl IntoElement {
     // Panel with background and text color applied so callers can place this directly
     // into the centered overlay container without re-styling.
     div()
-        .bg(BG_COLOR)
-        .text_color(TEXT_COLOR)
+        .bg(theme_colors.bg_color)
+        .text_color(theme_colors.text_color)
         .rounded_xl()
         .p_8()
         .shadow_lg()
@@ -75,6 +74,7 @@ pub fn help_panel() -> impl IntoElement {
                         .child(shortcut_row("Cmd + B", "Scroll to Bottom"))
                         .child(shortcut_row("Cmd + +", "Increase Font Size"))
                         .child(shortcut_row("Cmd + -", "Decrease Font Size"))
+                        .child(shortcut_row("Cmd + Shift + T", "Toggle Theme"))
                         .child(shortcut_row("Cmd + Q", "Quit"))
                         .child(shortcut_row("Esc", "Close Overlay / Search")),
                 ),

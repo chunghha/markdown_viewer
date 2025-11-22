@@ -1,0 +1,39 @@
+(
+    window: (
+        width: 1024.0,
+        height: 768.0,
+        title: "Markdown Viewer",
+    ),
+    files: (
+        default_files: [
+            "README.md",
+            "TODO.md",
+        ],
+        supported_extensions: [
+            "md",
+            "markdown",
+            "txt",
+        ],
+    ),
+    file_watcher: (
+        enabled: true,
+        debounce_ms: 100,
+    ),
+    scroll: (
+        page_scroll_percentage: 0.8,
+        arrow_key_increment: 20.0,
+        space_scroll_percentage: 0.2,
+    ),
+    theme: (
+        theme: Light,
+        primary_font: "Google Sans Code",
+        code_font: "monospace",
+        base_text_size: 19.2,
+        line_height_multiplier: 1.5,
+        content_height_buffer: 200.0,
+    ),
+    logging: (
+        default_level: "info",
+        enable_file_logging: false,
+    ),
+)

@@ -32,6 +32,11 @@
     ),
     
     theme: (
+        // Theme variant: Light or Dark
+        // Controls the color scheme for all UI elements including
+        // main content, code blocks, TOC sidebar, and help overlay
+        theme: Light,
+        
         // Primary font family for text
         primary_font: "Google Sans Code",
         

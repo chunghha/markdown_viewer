@@ -63,6 +63,22 @@ pub fn handle_key_down(
         return;
     }
 
+    // Check for Cmd+Shift+T (macOS) or Ctrl+Shift+T (other platforms) to toggle theme
+    // This must come BEFORE the platform modifier checks to avoid conflicts with Cmd+T
+    if (event.keystroke.modifiers.platform || event.keystroke.modifiers.control)
+        && event.keystroke.modifiers.shift
+        && event.keystroke.key.as_str() == "t"
+    {
+        debug!("Theme toggle shortcut triggered (Cmd/Ctrl+Shift+T)");
+        viewer.config.theme.theme = viewer.config.theme.theme.toggle();
+        // Save config to persist theme preference
+        if let Err(e) = viewer.config.save_to_file("config.ron") {
+            debug!("Failed to save theme preference: {}", e);
+        }
+        cx.notify();
+        return;
+    }
+
     // Handle global shortcuts (Cmd+T, Cmd+B, Cmd+Q, Cmd+=, Cmd+-, Cmd+H)
     if event.keystroke.modifiers.platform {
         match event.keystroke.key.as_str() {
