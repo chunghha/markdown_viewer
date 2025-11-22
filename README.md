@@ -31,6 +31,11 @@ A desktop Markdown viewer built with Rust and GPUI, featuring advanced scrolling
 ### Visual Enhancements
 - **Version Badge**: Displays current version in bottom-right corner
 - **Styled Interface**: Custom colors and fonts for a polished look
+- **Table of Contents**: Right-side sidebar with hierarchical navigation (levels 2-4)
+  - Toggle with `Cmd+Z` or top-right button
+  - Click headings to jump to sections
+  - Auto-highlights current section
+  - Precise navigation accounting for text wrapping and images
 
 ### Keyboard Shortcuts
 - **Search**: `Cmd+F` (macOS) or `Ctrl+F` to toggle search
@@ -39,6 +44,7 @@ A desktop Markdown viewer built with Rust and GPUI, featuring advanced scrolling
 - **Quick Navigation**: `Cmd+T` (Top), `Cmd+B` (Bottom)
 - **Application**: `Cmd+Q` to quit
 - **Toggle Help Overlay**: `Cmd+H` to toggle help overlay for showing shortcuts
+- **Toggle TOC**: `Cmd+Z` to toggle Table of Contents sidebar
 - **Arrow Keys**: `↑`/`↓` for 20px incremental scrolling
 - **Page Navigation**: `Page Up`/`Page Down` for 80% viewport scrolling
 - **Document Navigation**: `Home`/`End` for jumping to top/bottom
@@ -242,6 +248,14 @@ markdown_viewer/
 - **Fixed Mouse Wheel Direction**: Proper handling of scroll up/down events
 - **Bounds Enforcement**: Eliminated scrolling beyond document boundaries
 - **Content Height**: Accurate estimation prevents content cutoff
+
+### v0.8.0 - Table of Contents Navigation (2025-11-22)
+- **TOC Sidebar**: Right-side hierarchical navigation for headings (levels 2-4)
+- **Smart Navigation**: Precise click-to-scroll accounting for text wrapping and images
+- **Toggle Controls**: `Cmd+Z` keyboard shortcut and top-right toggle button
+- **Auto-Highlighting**: Current section automatically highlighted based on scroll position
+- **Dynamic Layout**: Content area adjusts automatically when TOC is visible
+- **Live Updates**: TOC regenerates when markdown file is modified
 
 ### v0.7.2 - Code Architecture Refactor (2025-11-20)
 - **Modular Architecture**: Refactored `main.rs` into dedicated internal modules (`viewer`, `events`, `ui`)

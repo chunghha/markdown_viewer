@@ -65,9 +65,9 @@ The core infrastructure has been **fully implemented and tested**. The applicati
   - [x] Jump to search results
   - [ ] Search history
 
-- [ ] **Navigation Enhancements**
-  - [ ] Table of contents sidebar
-  - [ ] Heading-based navigation
+- [x] **Navigation Enhancements**
+  - [x] Table of contents sidebar (right-side, levels 2-4)
+  - [x] Heading-based navigation (precise click-to-scroll)
   - [ ] Bookmark specific positions
   - [ ] Go-to-line functionality
 

@@ -116,3 +116,127 @@ pub fn render_file_deleted_overlay(viewer: &MarkdownViewer) -> Option<impl IntoE
         None
     }
 }
+
+pub fn render_toc_sidebar(
+    viewer: &MarkdownViewer,
+    cx: &mut gpui::Context<MarkdownViewer>,
+) -> Option<impl IntoElement> {
+    if !viewer.show_toc || viewer.toc.entries.is_empty() {
+        return None;
+    }
+
+    use crate::internal::style::{
+        TOC_ACTIVE_COLOR, TOC_BG_COLOR, TOC_BORDER_COLOR, TOC_HOVER_COLOR, TOC_INDENT_PER_LEVEL,
+        TOC_TEXT_COLOR, TOC_WIDTH,
+    };
+
+    let avg_line_height =
+        viewer.config.theme.base_text_size * viewer.config.theme.line_height_multiplier;
+    let current_section_idx = viewer
+        .toc
+        .find_current_section(viewer.scroll_state.scroll_y, avg_line_height);
+
+    let toc_entries = viewer
+        .toc
+        .entries
+        .iter()
+        .enumerate()
+        .map(|(idx, entry)| {
+            let is_active = current_section_idx == Some(idx);
+            let indent = (entry.level as f32 - 1.0) * TOC_INDENT_PER_LEVEL;
+            let line_number = entry.line_number;
+
+            div()
+                .px(px(8.0 + indent))
+                .py_1()
+                .text_size(px(13.0))
+                .text_color(TOC_TEXT_COLOR)
+                .cursor_pointer()
+                .when(is_active, |div| div.bg(TOC_ACTIVE_COLOR))
+                .hover(|div| div.bg(TOC_HOVER_COLOR))
+                .on_mouse_down(
+                    gpui::MouseButton::Left,
+                    cx.listener(move |this, _event, _, cx| {
+                        // Calculate target scroll position based on line number using smart logic
+                        let target_y = this.calculate_y_for_line(line_number);
+                        this.scroll_state.scroll_y = target_y.min(this.scroll_state.max_scroll_y);
+                        cx.notify();
+                    }),
+                )
+                .child(entry.text.clone())
+        })
+        .collect::<Vec<_>>();
+
+    Some(
+        div()
+            .absolute()
+            .top_0()
+            .right_0()
+            .bottom_0()
+            .w(px(TOC_WIDTH))
+            .bg(TOC_BG_COLOR)
+            .border_l_1()
+            .border_color(TOC_BORDER_COLOR)
+            .overflow_hidden()
+            .on_scroll_wheel(cx.listener(|this, event: &gpui::ScrollWheelEvent, _, cx| {
+                let delta = event
+                    .delta
+                    .pixel_delta(px(this.config.theme.base_text_size))
+                    .y;
+                let delta_f32: f32 = delta.into();
+
+                // Scroll TOC
+                if delta_f32 > 0.0 {
+                    // Scroll down
+                    this.toc_scroll_y = (this.toc_scroll_y + delta_f32).min(this.toc_max_scroll_y);
+                } else {
+                    // Scroll up
+                    this.toc_scroll_y = (this.toc_scroll_y + delta_f32).max(0.0);
+                }
+                cx.notify();
+            }))
+            .child(
+                div()
+                    .flex()
+                    .flex_col()
+                    .gap_1()
+                    .pt_4()
+                    .pb_4()
+                    .relative()
+                    .top(px(-viewer.toc_scroll_y))
+                    .children(toc_entries),
+            ),
+    )
+}
+
+pub fn render_toc_toggle_button(
+    viewer: &MarkdownViewer,
+    cx: &mut gpui::Context<MarkdownViewer>,
+) -> impl IntoElement {
+    use crate::internal::style::{
+        TOC_TOGGLE_BG_COLOR, TOC_TOGGLE_HOVER_COLOR, TOC_TOGGLE_TEXT_COLOR,
+    };
+
+    div()
+        .absolute()
+        .top_4()
+        .right_4()
+        .bg(TOC_TOGGLE_BG_COLOR)
+        .text_color(TOC_TOGGLE_TEXT_COLOR)
+        .rounded_md()
+        .px_3()
+        .py_2()
+        .text_size(px(18.0))
+        .font_weight(FontWeight::BOLD)
+        .cursor_pointer()
+        .hover(|div| div.bg(TOC_TOGGLE_HOVER_COLOR))
+        .on_mouse_down(
+            gpui::MouseButton::Left,
+            cx.listener(|this, _event, _, cx| {
+                this.show_toc = !this.show_toc;
+                this.recompute_max_scroll();
+                cx.notify();
+            }),
+        )
+        .child(if viewer.show_toc { "✕" } else { "☰" })
+}

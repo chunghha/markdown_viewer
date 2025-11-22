@@ -66,6 +66,14 @@ pub struct MarkdownViewer {
         Option<Debouncer<notify::RecommendedWatcher, notify_debouncer_full::FileIdMap>>,
     /// Whether the file has been deleted
     pub file_deleted: bool,
+    /// Whether to show the table of contents sidebar
+    pub show_toc: bool,
+    /// Table of contents extracted from markdown
+    pub toc: crate::internal::toc::TableOfContents,
+    /// TOC sidebar scroll position
+    pub toc_scroll_y: f32,
+    /// TOC sidebar maximum scroll position
+    pub toc_max_scroll_y: f32,
 }
 
 impl MarkdownViewer {
@@ -82,6 +90,13 @@ impl MarkdownViewer {
     ) -> Self {
         let viewport_height = config.window.height;
         let viewport_width = config.window.width;
+
+        // Parse markdown to generate TOC
+        let arena = comrak::Arena::new();
+        let mut options = comrak::Options::default();
+        options.extension.table = true;
+        let root = comrak::parse_document(&arena, &markdown_content, &options);
+        let toc = crate::internal::toc::TableOfContents::from_ast(root);
 
         let mut viewer = Self {
             markdown_content,
@@ -100,10 +115,33 @@ impl MarkdownViewer {
             file_watcher_rx,
             file_watcher,
             file_deleted: false,
+            show_toc: false,
+            toc,
+            toc_scroll_y: 0.0,
+            toc_max_scroll_y: 0.0,
         };
 
         viewer.recompute_max_scroll();
+        viewer.compute_toc_max_scroll();
         viewer
+    }
+
+    /// Compute the maximum scroll position for the TOC sidebar
+    pub fn compute_toc_max_scroll(&mut self) {
+        if self.toc.entries.is_empty() {
+            self.toc_max_scroll_y = 0.0;
+            return;
+        }
+
+        // Each TOC entry has: 8px horizontal padding + text + 4px vertical padding (py_1)
+        // Plus gap_1 (4px) between entries, and pt_4/pb_4 (16px each) for the container
+        const ENTRY_HEIGHT: f32 = 30.0; // Approximate height per entry
+        const CONTAINER_PADDING: f32 = 32.0; // pt_4 + pb_4
+
+        let toc_content_height = (self.toc.entries.len() as f32) * ENTRY_HEIGHT + CONTAINER_PADDING;
+        let toc_viewport_height = self.viewport_height;
+
+        self.toc_max_scroll_y = (toc_content_height - toc_viewport_height).max(0.0);
     }
 
     // Calculate the estimated Y scroll position for a given byte offset
@@ -173,11 +211,23 @@ impl MarkdownViewer {
         }
     }
 
-    pub fn recompute_max_scroll(&mut self) {
+    /// Calculate the Y position for a specific line number
+    pub fn calculate_y_for_line(&self, line_number: usize) -> f32 {
+        let (height, _) = self.calculate_smart_height(Some(line_number));
+        // Add top padding
+        height + 32.0 // CONTAINER_PADDING
+    }
+
+    /// Calculates the height of the content using smart logic (wrapping, images, etc.)
+    /// If stop_at_line is Some(n), returns the height up to the start of line n.
+    /// Returns (height, found_image_paths)
+    fn calculate_smart_height(
+        &self,
+        stop_at_line: Option<usize>,
+    ) -> (f32, std::collections::HashSet<String>) {
         let avg_line_height =
             self.config.theme.base_text_size * self.config.theme.line_height_multiplier;
 
-        // --- Smart Logic (Current) ---
         // Weights (multipliers relative to avg_line_height)
         let heading_weight = 1.4;
         let code_line_weight = 1.2;
@@ -188,13 +238,22 @@ impl MarkdownViewer {
         let mut in_fenced_code = false;
 
         // Estimate wrapping for text lines
+        let effective_width = if self.show_toc {
+            self.viewport_width - crate::internal::style::TOC_WIDTH - 64.0
+        } else {
+            self.viewport_width - 64.0
+        };
         let char_width = self.config.theme.base_text_size * 0.35;
-        let chars_per_line = (self.viewport_width / char_width).max(20.0);
+        let chars_per_line = (effective_width / char_width).max(20.0);
 
         let mut smart_text_height = 0.0;
         let mut found_image_paths = std::collections::HashSet::new();
 
-        for raw_line in self.markdown_content.lines() {
+        for (idx, raw_line) in self.markdown_content.lines().enumerate() {
+            if stop_at_line.is_some_and(|stop_idx| idx >= stop_idx) {
+                break;
+            }
+
             let line = raw_line.trim_start();
 
             // Toggle fenced code block state
@@ -280,6 +339,16 @@ impl MarkdownViewer {
 
             smart_text_height += visual_lines * avg_line_height * weight;
         }
+
+        (smart_text_height, found_image_paths)
+    }
+
+    pub fn recompute_max_scroll(&mut self) {
+        let avg_line_height =
+            self.config.theme.base_text_size * self.config.theme.line_height_multiplier;
+
+        // --- Smart Logic (Current) ---
+        let (smart_text_height, found_image_paths) = self.calculate_smart_height(None);
 
         let smart_total_height = smart_text_height;
 
@@ -491,12 +560,25 @@ impl Render for MarkdownViewer {
                         match load_markdown_content(path_str) {
                             Ok(new_content) => {
                                 self.markdown_content = new_content;
+
+                                // Regenerate TOC
+                                let arena = comrak::Arena::new();
+                                let mut options = comrak::Options::default();
+                                options.extension.table = true;
+                                let root = comrak::parse_document(
+                                    &arena,
+                                    &self.markdown_content,
+                                    &options,
+                                );
+                                self.toc = crate::internal::toc::TableOfContents::from_ast(root);
+
                                 // Clear image cache as images may have changed
                                 self.image_cache.clear();
                                 self.image_display_heights.clear();
                                 // Restore scroll position
                                 self.scroll_state.scroll_y = saved_scroll_y;
                                 self.recompute_max_scroll();
+                                self.compute_toc_max_scroll();
                                 // Clear file deleted flag if it was set
                                 self.file_deleted = false;
                                 info!("File reloaded successfully");
@@ -611,7 +693,11 @@ impl Render for MarkdownViewer {
                         .flex_col()
                         .w_full()
                         .pt_4()
-                        .pr_8()
+                        .pr(if self.show_toc {
+                            px(crate::internal::style::TOC_WIDTH + 32.0)
+                        } else {
+                            px(32.0)
+                        })
                         .pb_4()
                         .pl_8()
                         .relative()
@@ -620,7 +706,11 @@ impl Render for MarkdownViewer {
                             root,
                             Some(&self.markdown_file_path),
                             self.search_state.as_ref(),
-                            self.viewport_width,
+                            if self.show_toc {
+                                self.viewport_width - crate::internal::style::TOC_WIDTH - 64.0
+                            } else {
+                                self.viewport_width - 64.0
+                            },
                             cx,
                             &mut |path| {
                                 if let Some(ImageState::Loaded(src)) = self.image_cache.get(path) {
@@ -658,6 +748,16 @@ impl Render for MarkdownViewer {
         } else {
             element
         };
+
+        // TOC Sidebar
+        let element = if let Some(sidebar) = ui::render_toc_sidebar(self, cx) {
+            element.child(sidebar)
+        } else {
+            element
+        };
+
+        // TOC Toggle Button
+        let element = element.child(ui::render_toc_toggle_button(self, cx));
 
         for path in missing_images {
             self.load_image(path, window, cx);

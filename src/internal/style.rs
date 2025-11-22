@@ -157,4 +157,77 @@ pub const LINE_HEIGHT_MULTIPLIER: f32 = 1.5;
 pub const CONTENT_HEIGHT_BUFFER: f32 = 400.0;
 
 /// Default viewport height used when window dimensions are unavailable
+/// Default viewport height used when window dimensions are unavailable
 pub const DEFAULT_VIEWPORT_HEIGHT: f32 = 800.0;
+
+// ---- Table of Contents Styling ---------------------------------------------
+
+/// Width of the TOC sidebar when visible
+pub const TOC_WIDTH: f32 = 300.0;
+
+/// Background color for TOC sidebar
+pub const TOC_BG_COLOR: Rgba = Rgba {
+    r: 0.969,
+    g: 0.957,
+    b: 0.941,
+    a: 1.0,
+};
+
+/// Text color for TOC entries
+pub const TOC_TEXT_COLOR: Rgba = Rgba {
+    r: 0.3,
+    g: 0.3,
+    b: 0.3,
+    a: 1.0,
+};
+
+/// Background color for TOC entry on hover
+pub const TOC_HOVER_COLOR: Rgba = Rgba {
+    r: 0.859,
+    g: 0.847,
+    b: 0.831,
+    a: 1.0,
+};
+
+/// Background color for active TOC entry (current section)
+pub const TOC_ACTIVE_COLOR: Rgba = Rgba {
+    r: 0.502,
+    g: 0.686,
+    b: 0.878,
+    a: 0.3,
+};
+
+/// Indentation per heading level in TOC
+pub const TOC_INDENT_PER_LEVEL: f32 = 12.0;
+
+/// TOC toggle button background color
+pub const TOC_TOGGLE_BG_COLOR: Rgba = Rgba {
+    r: 0.502,
+    g: 0.686,
+    b: 0.878,
+    a: 0.9,
+};
+
+/// TOC toggle button text color
+pub const TOC_TOGGLE_TEXT_COLOR: Rgba = Rgba {
+    r: 1.0,
+    g: 1.0,
+    b: 1.0,
+    a: 1.0,
+};
+
+/// TOC sidebar border color
+pub const TOC_BORDER_COLOR: Rgba = Rgba {
+    r: 0.8,
+    g: 0.8,
+    b: 0.8,
+    a: 1.0,
+};
+
+/// TOC toggle button hover color
+pub const TOC_TOGGLE_HOVER_COLOR: Rgba = Rgba {
+    r: 0.502,
+    g: 0.686,
+    b: 0.878,
+    a: 1.0,
+};

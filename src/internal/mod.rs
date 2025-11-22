@@ -16,6 +16,7 @@ pub mod scroll;
 pub mod search;
 pub mod style;
 pub mod text_highlight;
+pub mod toc;
 pub mod ui;
 pub mod viewer;
 

@@ -89,6 +89,13 @@ pub fn handle_key_down(
                 cx.notify();
                 return;
             }
+            "z" => {
+                debug!("Toggle TOC sidebar (Cmd+Z)");
+                viewer.show_toc = !viewer.show_toc;
+                viewer.recompute_max_scroll();
+                cx.notify();
+                return;
+            }
             _ => {}
         }
     }

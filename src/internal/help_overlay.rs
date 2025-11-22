@@ -68,6 +68,7 @@ pub fn help_panel() -> impl IntoElement {
                         .flex_col()
                         .gap_2()
                         .child(shortcut_row("Cmd + H", "Toggle Help"))
+                        .child(shortcut_row("Cmd + Z", "Toggle TOC"))
                         .child(shortcut_row("Cmd + F", "Search"))
                         .child(shortcut_row("Cmd + T", "Scroll to Top"))
                         .child(shortcut_row("Cmd + B", "Scroll to Bottom"))
