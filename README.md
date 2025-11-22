@@ -238,31 +238,38 @@ markdown_viewer/
 
 ## Recent Improvements
 
-### Bug Fixes ✅
+### Bug Fixes
 - **Fixed Mouse Wheel Direction**: Proper handling of scroll up/down events
 - **Bounds Enforcement**: Eliminated scrolling beyond document boundaries
 - **Content Height**: Accurate estimation prevents content cutoff
 
+### v0.7.2 - Code Architecture Refactor (2025-11-20)
+- **Modular Architecture**: Refactored `main.rs` into dedicated internal modules (`viewer`, `events`, `ui`)
+- **Clean Code**: Significantly reduced `main.rs` size and complexity
+- **Component Extraction**: Separated event handling, UI overlays, and core viewer logic
+- **Maintainability**: Improved code organization for easier future development
+- **Verified**: All features and tests verified to work seamlessly with new structure
+
 ### v0.7.1 - Responsive Table Layout (2025-11-20)
-- ✨ **Responsive Tables**: Dynamic column width calculation based on column count
-- 📏 **Minimum Width**: 150px minimum column width ensures readability
-- 🎨 **Improved Layout**: Fixed-width columns with better text wrapping and warm beige headers
-- 🔧 **Smart Sizing**: Tables adapt to content while maintaining consistency
-- 🐛 **Bug Fixes**: Corrected viewport width calculation for dynamic resizing
-- 🧹 **Code Quality**: Resolved clippy warnings and optimized rendering performance
+- **Responsive Tables**: Dynamic column width calculation based on column count
+- **Minimum Width**: 150px minimum column width ensures readability
+- **Improved Layout**: Fixed-width columns with better text wrapping and warm beige headers
+- **Smart Sizing**: Tables adapt to content while maintaining consistency
+- **Bug Fixes**: Corrected viewport width calculation for dynamic resizing
+- **Code Quality**: Resolved clippy warnings and optimized rendering performance
 
 ### v0.7.0 - File Watching (2025-11-20)
-- 🔄 **Auto-Reload**: Automatically reloads when markdown files change on disk
-- 📍 **Scroll Preservation**: Maintains scroll position after reload
-- 🗑️ **Deletion Handling**: Gracefully handles file deletion with visual feedback
-- ⚙️ **Configurable**: Debouncing and enable/disable options in config
-- 🧪 **Tested**: Comprehensive test coverage for all file watching scenarios
+- **Auto-Reload**: Automatically reloads when markdown files change on disk
+- **Scroll Preservation**: Maintains scroll position after reload
+- **Deletion Handling**: Gracefully handles file deletion with visual feedback
+- **Configurable**: Debouncing and enable/disable options in config
+- **Tested**: Comprehensive test coverage for all file watching scenarios
 
 ### v0.6.0 - Visual Polish & Shortcuts (2025-11-19)
-- 🎨 **Version Badge**: Sky blue badge with version number in top-right corner
-- ⌨️ **Global Shortcuts**: Cmd+T (top), Cmd+B (bottom), Cmd+Q (quit)
-- 🔍 **Font Size Controls**: Cmd+= to increase, Cmd+- to decrease font size
-- 📐 **Dynamic Scroll**: Scroll bounds recompute when font size changes
+- **Version Badge**: Sky blue badge with version number in top-right corner
+- **Global Shortcuts**: Cmd+T (top), Cmd+B (bottom), Cmd+Q (quit)
+- **Font Size Controls**: Cmd+= to increase, Cmd+- to decrease font size
+- **Dynamic Scroll**: Scroll bounds recompute when font size changes
 - **Search Functionality**: Full text search with highlighting and navigation
 - **CLI Arguments**: Accept file path as command-line argument with fallback to README.md/TODO.md
 - **File Validation**: Proper error handling for missing or invalid files
@@ -271,7 +278,7 @@ markdown_viewer/
 - **Structured Logging**: Tracing integration for debugging and monitoring
 - **Error Handling**: Professional error messages with anyhow context
 
-### Code Quality ✅
+### Code Quality
 - **Meaningful Constants**: Extracted magic numbers to named constants
 - **Enhanced Documentation**: Updated all project documentation
 - **Test Coverage**: 65 tests covering scrolling, file handling, configuration, validation, and file watching

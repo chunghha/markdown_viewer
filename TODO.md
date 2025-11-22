@@ -23,6 +23,7 @@ The core infrastructure has been **fully implemented and tested**. The applicati
 - [x] **Responsive Table Layout**: Dynamic column widths with minimum width enforcement
 - [x] **Table Header Polish**: Improved styling with warmer background color
 - [x] **Layout Bug Fixes**: Corrected viewport width propagation for accurate resizing
+- [x] **Code Refactoring**: Extracted `main.rs` logic into modular components (`viewer`, `events`, `ui`)
 
 ## Next Development Phases 🚀
 
@@ -108,9 +109,9 @@ The core infrastructure has been **fully implemented and tested**. The applicati
 ## Technical Debt and Maintenance
 
 ### Code Organization
-- [ ] **Module Structure**
-  - [ ] Extract rendering logic to separate module
-  - [ ] Create dedicated file handling module
+- [x] **Module Structure**
+  - [x] Extract rendering logic to separate module
+  - [x] Create dedicated file handling module
   - [ ] Implement plugin architecture foundation
 
 - [x] **Error Handling**

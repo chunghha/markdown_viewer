@@ -7,6 +7,7 @@ pub mod config;
 mod internal;
 
 // Re-export public types and functions
+pub use internal::events;
 pub use internal::file_handling::{
     is_supported_extension, load_markdown_content, resolve_image_path, resolve_markdown_file_path,
 };
@@ -17,6 +18,8 @@ pub use internal::rendering::{
 pub use internal::scroll::ScrollState;
 pub use internal::search::SearchState;
 pub use internal::style::*;
+pub use internal::ui;
+pub use internal::viewer::{ImageState, MarkdownViewer};
 
 // Re-export internal helpers that are useful to binary targets (controlled exposure)
 pub use internal::image::{rasterize_svg_to_dynamic_image, rgba_to_bgra};
