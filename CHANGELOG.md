@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.1] - 2025-11-23
+
+### Fixed
+- **TOC Scroll Direction**: Fixed reversed scrolling in TOC sidebar on macOS with natural scrolling
+
 ## [0.11.0] - 2025-11-23
 
 ### Added

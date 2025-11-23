@@ -292,13 +292,12 @@ pub fn render_toc_sidebar(
                 let delta_f32: f32 = delta.into();
 
                 // Scroll TOC
-                if delta_f32 > 0.0 {
-                    // Scroll down
-                    this.toc_scroll_y = (this.toc_scroll_y + delta_f32).min(this.toc_max_scroll_y);
-                } else {
-                    // Scroll up
-                    this.toc_scroll_y = (this.toc_scroll_y + delta_f32).max(0.0);
-                }
+                // On macOS with natural scrolling, delta is already in the correct direction
+                // Positive delta = scroll down (content moves up)
+                // Negative delta = scroll up (content moves down)
+                // Simply apply the delta directly
+                this.toc_scroll_y =
+                    (this.toc_scroll_y - delta_f32).clamp(0.0, this.toc_max_scroll_y);
                 cx.notify();
             }))
             .child(
