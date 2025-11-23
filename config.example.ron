@@ -53,6 +53,21 @@
         content_height_buffer: 400.0,
     ),
     
+    pdf_export: (
+        // Font for body text in exported PDFs
+        default_font: "Google Sans Code",
+        
+        // Font for code blocks in exported PDFs
+        code_font: "GeistMono Nerd Font",
+        
+        // Fallback fonts for characters not available in primary fonts
+        fallback_fonts: ["Arial Unicode MS", "DejaVu Sans"],
+        
+        // Enable font subsetting to reduce PDF file size
+        // Set to false if you experience panics or errors during export
+        enable_subsetting: false,
+    ),
+    
     logging: (
         // Default log level: trace, debug, info, warn, error
         // Can be overridden with RUST_LOG environment variable

@@ -12,20 +12,27 @@ use tracing::{debug, info};
 /// # Arguments
 /// * `markdown_content` - The raw markdown text to export
 /// * `output_path` - Path where the PDF should be saved
+/// * `pdf_config` - PDF export configuration (fonts, fallbacks)
 ///
 /// # Returns
 /// * `Ok(())` if the PDF was successfully created
 /// * `Err` if there was an error during conversion or file writing
 ///
 /// # Example
-/// ```no_run
+/// ```no_run,ignore
 /// use std::path::Path;
 /// use markdown_viewer::internal::pdf_export::export_to_pdf;
+/// use markdown_viewer::config::PdfExportConfig;
 ///
 /// let markdown = "# Hello World\n\nThis is a test.";
-/// export_to_pdf(markdown, Path::new("output.pdf")).unwrap();
+/// let pdf_config = PdfExportConfig::default();
+/// export_to_pdf(markdown, Path::new("output.pdf"), &pdf_config).unwrap();
 /// ```
-pub fn export_to_pdf(markdown_content: &str, output_path: &Path) -> Result<()> {
+pub fn export_to_pdf(
+    markdown_content: &str,
+    output_path: &Path,
+    pdf_config: &crate::config::PdfExportConfig,
+) -> Result<()> {
     info!("Exporting markdown to PDF: {:?}", output_path);
     debug!("Markdown content length: {} bytes", markdown_content.len());
 
@@ -34,12 +41,21 @@ pub fn export_to_pdf(markdown_content: &str, output_path: &Path) -> Result<()> {
         .to_str()
         .ok_or_else(|| anyhow::anyhow!("Invalid output path: {:?}", output_path))?;
 
-    // Use markdown2pdf to convert markdown to PDF with default configuration
+    // Configure fonts from user configuration
+    let font_config = markdown2pdf::fonts::FontConfig {
+        custom_paths: vec![],
+        default_font: Some(pdf_config.default_font.clone()),
+        code_font: Some(pdf_config.code_font.clone()),
+        fallback_fonts: pdf_config.fallback_fonts.clone(),
+        enable_subsetting: pdf_config.enable_subsetting,
+    };
+
+    // Use markdown2pdf to convert markdown to PDF with custom font configuration
     markdown2pdf::parse_into_file(
         markdown_content.to_string(),
         output_path_str,
         markdown2pdf::config::ConfigSource::Default,
-        None,
+        Some(&font_config),
     )
     .map_err(|e| anyhow::anyhow!("PDF generation failed: {:?}", e))?;
 
@@ -57,12 +73,13 @@ mod tests {
         let markdown = "# Test Document\n\nThis is a test.\n\n## Section\n\n* Item 1\n* Item 2";
         let temp_dir = std::env::temp_dir();
         let output_path = temp_dir.join("test_export.pdf");
+        let pdf_config = crate::config::PdfExportConfig::default();
 
         // Clean up if file exists
         let _ = fs::remove_file(&output_path);
 
         // Export to PDF
-        let result = export_to_pdf(markdown, &output_path);
+        let result = export_to_pdf(markdown, &output_path, &pdf_config);
         assert!(result.is_ok(), "PDF export should succeed");
 
         // Verify file was created
@@ -81,12 +98,13 @@ mod tests {
         let markdown = "";
         let temp_dir = std::env::temp_dir();
         let output_path = temp_dir.join("test_empty.pdf");
+        let pdf_config = crate::config::PdfExportConfig::default();
 
         // Clean up if file exists
         let _ = fs::remove_file(&output_path);
 
         // Export to PDF
-        let result = export_to_pdf(markdown, &output_path);
+        let result = export_to_pdf(markdown, &output_path, &pdf_config);
 
         // Should still succeed (creates empty or minimal PDF)
         assert!(result.is_ok(), "PDF export should handle empty content");
@@ -99,8 +117,9 @@ mod tests {
     fn test_export_to_pdf_validates_path() {
         let markdown = "# Test";
         let invalid_path = Path::new("/invalid/nonexistent/directory/test.pdf");
+        let pdf_config = crate::config::PdfExportConfig::default();
 
-        let result = export_to_pdf(markdown, invalid_path);
+        let result = export_to_pdf(markdown, invalid_path, &pdf_config);
         assert!(result.is_err(), "Should fail with invalid path");
     }
 }

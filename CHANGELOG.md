@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.1] - 2025-11-23
+
+### Added
+- **Configurable Fonts**: PDF export now uses user-configurable fonts defined in `config.ron`
+- **Consistent Typography**: Defaults to "Google Sans Code" and "GeistMono Nerd Font" to match viewer
+- **Unicode Support**: Added fallback fonts ("Arial Unicode MS", "DejaVu Sans") for better character coverage
+- **Configuration**: New `pdf_export` section in configuration file for customizing fonts
+- **Stability**: Added `enable_subsetting` option (default: false) to prevent panics with certain fonts
+
 ## [0.10.0] - 2025-11-22
 
 ### Added

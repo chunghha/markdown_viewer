@@ -25,6 +25,9 @@ pub struct AppConfig {
     /// Theme and styling configuration
     pub theme: ThemeConfig,
 
+    /// PDF export configuration
+    pub pdf_export: PdfExportConfig,
+
     /// Logging configuration
     pub logging: LoggingConfig,
 }
@@ -98,6 +101,22 @@ pub struct ThemeConfig {
     pub content_height_buffer: f32,
 }
 
+/// PDF export configuration
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct PdfExportConfig {
+    /// Default font for body text in PDFs
+    pub default_font: String,
+
+    /// Font for code blocks in PDFs
+    pub code_font: String,
+
+    /// Fallback fonts when primary fonts don't have a character
+    pub fallback_fonts: std::vec::Vec<String>,
+
+    /// Enable font subsetting to reduce PDF file size (disable if fonts cause errors)
+    pub enable_subsetting: bool,
+}
+
 /// Logging configuration
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct LoggingConfig {
@@ -155,6 +174,17 @@ impl Default for ThemeConfig {
             base_text_size: 19.2,
             line_height_multiplier: 1.5,
             content_height_buffer: 200.0,
+        }
+    }
+}
+
+impl Default for PdfExportConfig {
+    fn default() -> Self {
+        Self {
+            default_font: "Google Sans Code".to_string(),
+            code_font: "GeistMono Nerd Font".to_string(),
+            fallback_fonts: vec!["Arial Unicode MS".to_string(), "DejaVu Sans".to_string()],
+            enable_subsetting: false,
         }
     }
 }
@@ -421,6 +451,12 @@ mod tests {
     file_watcher: (
         enabled: true,
         debounce_ms: 100,
+    ),
+    pdf_export: (
+        default_font: "Arial",
+        code_font: "Courier",
+        fallback_fonts: [],
+        enable_subsetting: true,
     ),
 )
 "#;

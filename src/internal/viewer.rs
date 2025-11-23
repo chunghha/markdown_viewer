@@ -279,8 +279,12 @@ impl MarkdownViewer {
     fn perform_pdf_export(&mut self, pdf_path: &std::path::Path) {
         debug!("PDF export triggered, output path: {:?}", pdf_path);
 
-        // Perform export using pdf_export module
-        match crate::internal::pdf_export::export_to_pdf(&self.markdown_content, pdf_path) {
+        // Perform export using pdf_export module with configuration
+        match crate::internal::pdf_export::export_to_pdf(
+            &self.markdown_content,
+            pdf_path,
+            &self.config.pdf_export,
+        ) {
             Ok(()) => {
                 info!("Successfully exported PDF to {:?}", pdf_path);
                 // Show success notification

@@ -185,13 +185,13 @@ mod tests {
             line_number: 20,
         });
 
-        // At line 5 (scroll_y = 5 * 20 = 100), should be in Section 1 (index 0)
-        assert_eq!(toc.find_current_section(100.0, 20.0), Some(0));
+        // At line 2 (scroll_y = 40), adjusted = 140 (line 7) -> Section 1 (starts at 0)
+        assert_eq!(toc.find_current_section(40.0, 20.0), Some(0));
 
-        // At line 15 (scroll_y = 15 * 20 = 300), should be in Section 2 (index 1)
-        assert_eq!(toc.find_current_section(300.0, 20.0), Some(1));
+        // At line 12 (scroll_y = 240), adjusted = 340 (line 17) -> Section 2 (starts at 10)
+        assert_eq!(toc.find_current_section(240.0, 20.0), Some(1));
 
-        // At line 25 (scroll_y = 25 * 20 = 500), should be in Section 3 (index 2)
-        assert_eq!(toc.find_current_section(500.0, 20.0), Some(2));
+        // At line 22 (scroll_y = 440), adjusted = 540 (line 27) -> Section 3 (starts at 20)
+        assert_eq!(toc.find_current_section(440.0, 20.0), Some(2));
     }
 }

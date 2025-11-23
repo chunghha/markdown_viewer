@@ -32,6 +32,15 @@
         line_height_multiplier: 1.5,
         content_height_buffer: 200.0,
     ),
+    pdf_export: (
+        default_font: "Google Sans Code",
+        code_font: "GeistMono Nerd Font",
+        fallback_fonts: [
+            "Arial Unicode MS",
+            "DejaVu Sans",
+        ],
+        enable_subsetting: false,
+    ),
     logging: (
         default_level: "info",
         enable_file_logging: false,
