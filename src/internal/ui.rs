@@ -344,3 +344,126 @@ pub fn render_toc_toggle_button(
         )
         .child(if viewer.show_toc { "✕" } else { "☰" })
 }
+
+pub fn render_bookmarks_overlay(
+    viewer: &MarkdownViewer,
+    theme_colors: &crate::internal::theme::ThemeColors,
+    cx: &mut gpui::Context<MarkdownViewer>,
+) -> Option<impl IntoElement> {
+    if !viewer.show_bookmarks {
+        return None;
+    }
+
+    let bookmarks_list = if viewer.bookmarks.is_empty() {
+        div()
+            .flex()
+            .items_center()
+            .justify_center()
+            .py_4()
+            .text_color(theme_colors.text_color)
+            .child("No bookmarks yet. Press Cmd+D to add one.")
+    } else {
+        div().flex().flex_col().gap_1().children(
+            viewer
+                .bookmarks
+                .iter()
+                .enumerate()
+                .map(|(idx, &line_number)| {
+                    div()
+                        .px_4()
+                        .py_2()
+                        .cursor_pointer()
+                        .hover(|div| div.bg(theme_colors.toc_hover_color))
+                        .text_color(theme_colors.text_color)
+                        .on_mouse_down(
+                            gpui::MouseButton::Left,
+                            cx.listener(move |this, _, _, cx| {
+                                let _ = this.scroll_to_line(line_number);
+                                this.show_bookmarks = false;
+                                cx.notify();
+                            }),
+                        )
+                        .child(format!("Bookmark {}: Line {}", idx + 1, line_number))
+                })
+                .collect::<Vec<_>>(),
+        )
+    };
+
+    Some(
+        div()
+            .absolute()
+            .top_12()
+            .right_12()
+            .w(px(300.0))
+            .bg(theme_colors.bg_color)
+            .border_1()
+            .border_color(theme_colors.toc_border_color)
+            .shadow_lg()
+            .rounded_md()
+            .p_4()
+            .child(
+                div()
+                    .flex()
+                    .flex_col()
+                    .gap_2()
+                    .child(
+                        div()
+                            .flex()
+                            .justify_between()
+                            .items_center()
+                            .pb_2()
+                            .border_b_1()
+                            .border_color(theme_colors.toc_border_color)
+                            .child(
+                                div()
+                                    .font_weight(FontWeight::BOLD)
+                                    .text_color(theme_colors.text_color)
+                                    .child("Bookmarks"),
+                            )
+                            .child(
+                                div()
+                                    .cursor_pointer()
+                                    .text_color(theme_colors.text_color)
+                                    .on_mouse_down(
+                                        gpui::MouseButton::Left,
+                                        cx.listener(|this, _, _, cx| {
+                                            this.show_bookmarks = false;
+                                            cx.notify();
+                                        }),
+                                    )
+                                    .child("✕"),
+                            ),
+                    )
+                    .child(bookmarks_list),
+            ),
+    )
+}
+
+pub fn render_search_history_notification(
+    viewer: &MarkdownViewer,
+    theme_colors: &crate::internal::theme::ThemeColors,
+    cx: &mut gpui::Context<MarkdownViewer>,
+) -> Option<impl IntoElement> {
+    viewer.search_history_message.as_ref().map(|message| {
+        div()
+            .absolute()
+            .top_0()
+            .left_0()
+            .right_0()
+            .bg(theme_colors.pdf_success_bg_color)
+            .text_color(theme_colors.pdf_notification_text_color)
+            .px_4()
+            .py_2()
+            .text_size(px(14.0))
+            .font_weight(FontWeight::BOLD)
+            .cursor_pointer()
+            .on_mouse_down(
+                gpui::MouseButton::Left,
+                cx.listener(|this, _, _, cx| {
+                    this.search_history_message = None;
+                    cx.notify();
+                }),
+            )
+            .child(format!("ℹ {} (Click to dismiss)", message))
+    })
+}

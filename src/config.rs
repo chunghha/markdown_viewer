@@ -30,6 +30,18 @@ pub struct AppConfig {
 
     /// Logging configuration
     pub logging: LoggingConfig,
+
+    /// Search history
+    #[serde(default)]
+    pub search_history: Vec<String>,
+
+    /// Maximum number of search history items to keep
+    #[serde(default = "default_max_history_items")]
+    pub max_history_items: usize,
+}
+
+fn default_max_history_items() -> usize {
+    20
 }
 
 /// Window configuration
@@ -237,7 +249,7 @@ impl AppConfig {
         std::fs::write(path, content)
             .context(format!("Failed to write configuration file: {:?}", path))?;
 
-        info!("Configuration saved successfully to {:?}", path);
+        debug!("Configuration saved successfully to {:?}", path);
         Ok(())
     }
 
@@ -468,5 +480,43 @@ mod tests {
         assert_eq!(config.theme.primary_font, "Arial");
         assert_eq!(config.logging.default_level, "debug");
         assert!(config.logging.enable_file_logging);
+    }
+
+    #[test]
+    fn test_search_history_config() {
+        let mut config = AppConfig::default();
+        config.search_history = vec!["foo".to_string(), "bar".to_string()];
+        config.max_history_items = 10;
+
+        let path = "test_config_history.ron";
+        config.save_to_file(path).expect("Failed to save config");
+
+        let loaded = AppConfig::load_from_file(path).expect("Failed to load config");
+        assert_eq!(loaded.search_history, vec!["foo", "bar"]);
+        assert_eq!(loaded.max_history_items, 10);
+
+        fs::remove_file(path).ok();
+    }
+
+    #[test]
+    fn test_clear_search_history() {
+        let mut config = AppConfig::default();
+        config.search_history = vec!["foo".to_string(), "bar".to_string()];
+
+        // Verify initial state
+        assert_eq!(config.search_history.len(), 2);
+
+        // Clear history
+        config.search_history.clear();
+        assert!(config.search_history.is_empty());
+
+        // Save and reload to verify persistence of clear
+        let path = "test_config_clear_history.ron";
+        config.save_to_file(path).expect("Failed to save config");
+
+        let loaded = AppConfig::load_from_file(path).expect("Failed to load config");
+        assert!(loaded.search_history.is_empty());
+
+        fs::remove_file(path).ok();
     }
 }

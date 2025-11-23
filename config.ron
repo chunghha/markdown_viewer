@@ -45,4 +45,6 @@
         default_level: "info",
         enable_file_logging: false,
     ),
+    search_history: [],
+    max_history_items: 20,
 )

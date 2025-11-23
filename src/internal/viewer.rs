@@ -88,6 +88,14 @@ pub struct MarkdownViewer {
     pub show_pdf_overwrite_confirm: bool,
     /// Path of PDF to potentially overwrite
     pub pdf_overwrite_path: Option<std::path::PathBuf>,
+    /// Current index in search history (None means not browsing history)
+    pub search_history_index: Option<usize>,
+    /// List of bookmarked line numbers
+    pub bookmarks: Vec<usize>,
+    /// Whether to show the bookmarks overlay
+    pub show_bookmarks: bool,
+    /// Message to show when search history is cleared/saved
+    pub search_history_message: Option<String>,
 }
 
 impl MarkdownViewer {
@@ -140,6 +148,10 @@ impl MarkdownViewer {
             pdf_export_success: false,
             show_pdf_overwrite_confirm: false,
             pdf_overwrite_path: None,
+            search_history_index: None,
+            bookmarks: Vec::new(),
+            show_bookmarks: false,
+            search_history_message: None,
         };
 
         viewer.recompute_max_scroll();
@@ -273,6 +285,21 @@ impl MarkdownViewer {
         self.scroll_state.scroll_y = centered_y.min(self.scroll_state.max_scroll_y);
 
         Ok(())
+    }
+
+    /// Get the line number corresponding to the current scroll position
+    pub fn get_current_line_number(&self) -> usize {
+        let scroll_y = self.scroll_state.scroll_y;
+        let avg_line_height =
+            self.config.theme.base_text_size * self.config.theme.line_height_multiplier;
+
+        // Simple estimation: scroll_y / avg_line_height
+        // This is rough but sufficient for bookmarks in this MVP
+        // A more accurate approach would reverse calculate_y_for_line
+        let line_index = (scroll_y / avg_line_height).floor() as usize;
+        let total_lines = self.markdown_content.lines().count();
+
+        (line_index + 1).min(total_lines).max(1)
     }
 
     /// Perform PDF export and set notification message
@@ -831,6 +858,13 @@ impl Render for MarkdownViewer {
             element
         };
 
+        // Bookmarks Overlay
+        let element = if let Some(overlay) = ui::render_bookmarks_overlay(self, &theme_colors, cx) {
+            element.child(overlay)
+        } else {
+            element
+        };
+
         // Help Overlay
         let element = if let Some(overlay) = ui::render_help_overlay(self, &theme_colors) {
             element.child(overlay)
@@ -847,6 +881,15 @@ impl Render for MarkdownViewer {
 
         // PDF Export Notification Overlay
         let element = if let Some(overlay) = ui::render_pdf_export_overlay(self, &theme_colors) {
+            element.child(overlay)
+        } else {
+            element
+        };
+
+        // Search History Notification Overlay
+        let element = if let Some(overlay) =
+            ui::render_search_history_notification(self, &theme_colors, cx)
+        {
             element.child(overlay)
         } else {
             element

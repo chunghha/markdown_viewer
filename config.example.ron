@@ -83,4 +83,11 @@
         // Debounce timeout in milliseconds (prevents excessive reloads during rapid saves)
         debounce_ms: 100,
     ),
+    ),
+    
+    // Search history configuration
+    search_history: [],
+    
+    // Maximum number of search history items to keep
+    max_history_items: 20,
 )

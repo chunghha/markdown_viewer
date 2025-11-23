@@ -1,5 +1,5 @@
 use gpui::{Context, KeyDownEvent, ScrollWheelEvent, px};
-use tracing::debug;
+use tracing::{debug, info};
 
 use crate::internal::search::SearchState;
 use crate::internal::viewer::MarkdownViewer;
@@ -63,6 +63,26 @@ pub fn handle_key_down(
         return;
     }
 
+    // Check for Cmd+Shift+H (macOS) or Ctrl+Shift+H (other platforms) to clear search history
+    if (event.keystroke.modifiers.platform || event.keystroke.modifiers.control)
+        && event.keystroke.modifiers.shift
+        && event.keystroke.key.as_str() == "h"
+    {
+        debug!("Clear search history shortcut triggered (Cmd/Ctrl+Shift+H)");
+        viewer.config.search_history.clear();
+        viewer.search_history_index = None;
+        // Save config
+        if let Err(e) = viewer.config.save_to_file("config.ron") {
+            debug!("Failed to save cleared search history: {}", e);
+            viewer.search_history_message = Some(format!("Failed to save: {}", e));
+        } else {
+            info!("Search history cleared");
+            viewer.search_history_message = Some("Search history cleared".to_string());
+        }
+        cx.notify();
+        return;
+    }
+
     // Check for Cmd+Shift+T (macOS) or Ctrl+Shift+T (other platforms) to toggle theme
     // This must come BEFORE the platform modifier checks to avoid conflicts with Cmd+T
     if (event.keystroke.modifiers.platform || event.keystroke.modifiers.control)
@@ -74,6 +94,38 @@ pub fn handle_key_down(
         // Save config to persist theme preference
         if let Err(e) = viewer.config.save_to_file("config.ron") {
             debug!("Failed to save theme preference: {}", e);
+        }
+        cx.notify();
+        return;
+    }
+
+    // Check for Cmd+Shift+B (macOS) or Ctrl+Shift+B (other platforms) to toggle bookmarks list
+    if (event.keystroke.modifiers.platform || event.keystroke.modifiers.control)
+        && event.keystroke.modifiers.shift
+        && event.keystroke.key.as_str() == "b"
+    {
+        debug!("Toggle bookmarks list shortcut triggered (Cmd/Ctrl+Shift+B)");
+        viewer.show_bookmarks = !viewer.show_bookmarks;
+        cx.notify();
+        return;
+    }
+
+    // Check for Cmd+D (macOS) or Ctrl+D (other platforms) to toggle bookmark
+    if (event.keystroke.modifiers.platform || event.keystroke.modifiers.control)
+        && event.keystroke.key.as_str() == "d"
+    {
+        debug!("Toggle bookmark shortcut triggered (Cmd/Ctrl+D)");
+        let current_line = viewer.get_current_line_number();
+
+        if let Some(pos) = viewer.bookmarks.iter().position(|&l| l == current_line) {
+            // Remove existing bookmark
+            viewer.bookmarks.remove(pos);
+            debug!("Removed bookmark at line {}", current_line);
+        } else {
+            // Add new bookmark
+            viewer.bookmarks.push(current_line);
+            viewer.bookmarks.sort(); // Keep sorted
+            debug!("Added bookmark at line {}", current_line);
         }
         cx.notify();
         return;
@@ -195,6 +247,7 @@ pub fn handle_key_down(
                 debug!("Exiting search mode (Escape)");
                 viewer.search_state = None;
                 viewer.search_input.clear();
+                viewer.search_history_index = None;
                 cx.notify();
                 return;
             }
@@ -212,7 +265,27 @@ pub fn handle_key_down(
                 return;
             }
             "enter" => {
-                // Next match
+                // Next match AND save to history
+                if !viewer.search_input.trim().is_empty() {
+                    let input = viewer.search_input.clone();
+                    let history = &mut viewer.config.search_history;
+
+                    // Add to history if it's different from the last item
+                    if history.last() != Some(&input) {
+                        history.push(input.clone());
+                        // Enforce max items
+                        if history.len() > viewer.config.max_history_items {
+                            history.remove(0);
+                        }
+                        // Save config
+                        if let Err(e) = viewer.config.save_to_file("config.ron") {
+                            debug!("Failed to save search history: {}", e);
+                        } else {
+                            info!("Saved to search history: '{}'", input);
+                        }
+                    }
+                }
+
                 if let Some(state) = &mut viewer.search_state {
                     state.next_match();
                     debug!("Next match (key_down): {:?}", state.current_match_number());
@@ -221,9 +294,59 @@ pub fn handle_key_down(
                 cx.notify();
                 return;
             }
+            "up" => {
+                // Navigate history back
+                let history_len = viewer.config.search_history.len();
+                if history_len > 0 {
+                    let new_index = match viewer.search_history_index {
+                        None => history_len - 1,
+                        Some(i) if i > 0 => i - 1,
+                        Some(_) => 0, // Stay at start
+                    };
+
+                    viewer.search_history_index = Some(new_index);
+                    if let Some(item) = viewer.config.search_history.get(new_index) {
+                        viewer.search_input = item.clone();
+                        viewer.search_state = Some(SearchState::new(
+                            viewer.search_input.clone(),
+                            &viewer.markdown_content,
+                        ));
+                        viewer.scroll_to_current_match();
+                    }
+                }
+                cx.notify();
+                return;
+            }
+            "down" => {
+                // Navigate history forward
+                if let Some(i) = viewer.search_history_index {
+                    let history_len = viewer.config.search_history.len();
+                    if i + 1 < history_len {
+                        let new_index = i + 1;
+                        viewer.search_history_index = Some(new_index);
+                        if let Some(item) = viewer.config.search_history.get(new_index) {
+                            viewer.search_input = item.clone();
+                            viewer.search_state = Some(SearchState::new(
+                                viewer.search_input.clone(),
+                                &viewer.markdown_content,
+                            ));
+                            viewer.scroll_to_current_match();
+                        }
+                    } else {
+                        // End of history, clear input
+                        viewer.search_history_index = None;
+                        viewer.search_input.clear();
+                        viewer.search_state =
+                            Some(SearchState::new(String::new(), &viewer.markdown_content));
+                    }
+                    cx.notify();
+                }
+                return;
+            }
             "backspace" => {
                 // Remove last character
                 viewer.search_input.pop();
+                viewer.search_history_index = None; // Reset history index on manual edit
                 viewer.search_state = Some(SearchState::new(
                     viewer.search_input.clone(),
                     &viewer.markdown_content,
@@ -239,6 +362,7 @@ pub fn handle_key_down(
             {
                 // Add character to search
                 viewer.search_input.push_str(key);
+                viewer.search_history_index = None; // Reset history index on manual edit
                 viewer.search_state = Some(SearchState::new(
                     viewer.search_input.clone(),
                     &viewer.markdown_content,

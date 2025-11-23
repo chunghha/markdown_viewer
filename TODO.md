@@ -66,7 +66,7 @@ The core infrastructure has been **fully implemented and tested**. The applicati
   - [x] Text search with highlighting
   - [x] Regex search support (Case-insensitive text search implemented)
   - [x] Jump to search results
-  - [ ] Search history
+  - [x] Search history
 
 - [x] **Navigation Enhancements**
   - [x] Table of contents sidebar (right-side, levels 2-4)
