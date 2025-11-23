@@ -82,7 +82,7 @@ The core infrastructure has been **fully implemented and tested**. The applicati
 
 ### Phase 4: Advanced Features (Low Priority)
 - [ ] **Export Options**
-  - [ ] Export to PDF
+  - [x] Export to PDF
   - [ ] Export to HTML
   - [ ] Export to plain text
   - [ ] Print functionality

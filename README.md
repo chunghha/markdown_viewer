@@ -246,75 +246,7 @@ markdown_viewer/
 
 ## Recent Improvements
 
-### Bug Fixes
-- **Fixed Mouse Wheel Direction**: Proper handling of scroll up/down events
-- **Bounds Enforcement**: Eliminated scrolling beyond document boundaries
-- **Content Height**: Accurate estimation prevents content cutoff
-
-### v0.9.0 - Theme System (2025-11-22)
-- **Light/Dark Themes**: Complete theme system with Light (default) and Dark variants
-- **Theme Toggle**: Press `Cmd+Shift+T` to toggle between themes instantly
-- **Theme Persistence**: Selected theme is saved to config and restored on app launch
-- **Comprehensive Colors**: All UI elements (text, code, TOC, overlays) adapt to theme
-- **Code Quality**: Enhanced with derive macros and comprehensive theme test coverage
-
-### v0.8.1 - Go-to-Line Functionality (2025-11-22)
-- **Go-to-Line Dialog**: Press `Cmd+G` (macOS) or `Ctrl+G` to open go-to-line dialog
-- **Line Number Input**: Type a line number and press `Enter` to jump to that line
-- **Input Validation**: Only accepts numeric input with bounds checking against total line count
-- **Visual Feedback**: Blue overlay shows current input and validation status
-- **Immediate Scrolling**: Instantly scrolls to target line, centered in viewport
-- **Error Handling**: Helpful error messages for invalid line numbers
-- **Help Integration**: Added go-to-line shortcut to help overlay
-
-### v0.8.0 - Table of Contents Navigation (2025-11-22)
-- **TOC Sidebar**: Right-side hierarchical navigation for headings (levels 2-4)
-- **Smart Navigation**: Precise click-to-scroll accounting for text wrapping and images
-- **Toggle Controls**: `Cmd+Z` keyboard shortcut and top-right toggle button
-- **Auto-Highlighting**: Current section automatically highlighted based on scroll position
-- **Dynamic Layout**: Content area adjusts automatically when TOC is visible
-- **Live Updates**: TOC regenerates when markdown file is modified
-
-### v0.7.2 - Code Architecture Refactor (2025-11-20)
-- **Modular Architecture**: Refactored `main.rs` into dedicated internal modules (`viewer`, `events`, `ui`)
-- **Clean Code**: Significantly reduced `main.rs` size and complexity
-- **Component Extraction**: Separated event handling, UI overlays, and core viewer logic
-- **Maintainability**: Improved code organization for easier future development
-- **Verified**: All features and tests verified to work seamlessly with new structure
-
-### v0.7.1 - Responsive Table Layout (2025-11-20)
-- **Responsive Tables**: Dynamic column width calculation based on column count
-- **Minimum Width**: 150px minimum column width ensures readability
-- **Improved Layout**: Fixed-width columns with better text wrapping and warm beige headers
-- **Smart Sizing**: Tables adapt to content while maintaining consistency
-- **Bug Fixes**: Corrected viewport width calculation for dynamic resizing
-- **Code Quality**: Resolved clippy warnings and optimized rendering performance
-
-### v0.7.0 - File Watching (2025-11-20)
-- **Auto-Reload**: Automatically reloads when markdown files change on disk
-- **Scroll Preservation**: Maintains scroll position after reload
-- **Deletion Handling**: Gracefully handles file deletion with visual feedback
-- **Configurable**: Debouncing and enable/disable options in config
-- **Tested**: Comprehensive test coverage for all file watching scenarios
-
-### v0.6.0 - Visual Polish & Shortcuts (2025-11-19)
-- **Version Badge**: Sky blue badge with version number in top-right corner
-- **Global Shortcuts**: Cmd+T (top), Cmd+B (bottom), Cmd+Q (quit)
-- **Font Size Controls**: Cmd+= to increase, Cmd+- to decrease font size
-- **Dynamic Scroll**: Scroll bounds recompute when font size changes
-- **Search Functionality**: Full text search with highlighting and navigation
-- **CLI Arguments**: Accept file path as command-line argument with fallback to README.md/TODO.md
-- **File Validation**: Proper error handling for missing or invalid files
-- **Usage Help**: Built-in help system with `--help` flag
-- **Configuration System**: RON-based configuration for customizable settings
-- **Structured Logging**: Tracing integration for debugging and monitoring
-- **Error Handling**: Professional error messages with anyhow context
-
-### Code Quality
-- **Meaningful Constants**: Extracted magic numbers to named constants
-- **Enhanced Documentation**: Updated all project documentation
-- **Test Coverage**: 71 tests covering scrolling, file handling, configuration, validation, file watching, and theme system
-- **Safe Tests**: File-manipulating tests now preserve project files
+See [CHANGELOG.md](CHANGELOG.md) for a complete history of improvements and version releases.
 
 ## Development Philosophy
 

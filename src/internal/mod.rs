@@ -11,6 +11,7 @@ pub mod file_watcher;
 pub mod help_overlay;
 pub mod image;
 pub mod image_loader;
+pub mod pdf_export;
 pub mod rendering;
 pub mod scroll;
 pub mod search;

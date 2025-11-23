@@ -162,6 +162,67 @@ pub fn render_file_deleted_overlay(viewer: &MarkdownViewer) -> Option<impl IntoE
     }
 }
 
+pub fn render_pdf_export_overlay(
+    viewer: &MarkdownViewer,
+    theme_colors: &crate::internal::theme::ThemeColors,
+) -> Option<impl IntoElement> {
+    if let Some(message) = &viewer.pdf_export_message {
+        let (bg_color, icon) = if viewer.pdf_export_success {
+            (theme_colors.pdf_success_bg_color, "✓")
+        } else {
+            (theme_colors.pdf_error_bg_color, "✗")
+        };
+
+        Some(
+            div()
+                .absolute()
+                .top_0()
+                .left_0()
+                .right_0()
+                .bg(bg_color)
+                .text_color(theme_colors.pdf_notification_text_color)
+                .px_4()
+                .py_2()
+                .text_size(px(14.0))
+                .font_weight(FontWeight::BOLD)
+                .child(format!("{} {}", icon, message)),
+        )
+    } else {
+        None
+    }
+}
+
+pub fn render_pdf_overwrite_confirm(
+    viewer: &MarkdownViewer,
+    theme_colors: &crate::internal::theme::ThemeColors,
+) -> Option<impl IntoElement> {
+    if viewer.show_pdf_overwrite_confirm {
+        let filename = viewer
+            .pdf_overwrite_path
+            .as_ref()
+            .and_then(|p| p.file_name())
+            .and_then(|n| n.to_str())
+            .unwrap_or("output.pdf");
+
+        Some(
+            div()
+                .absolute()
+                .top_0()
+                .left_0()
+                .right_0()
+                .bg(theme_colors.pdf_warning_bg_color)
+                .text_color(theme_colors.text_color)
+                .px_4()
+                .py_2()
+                .text_size(px(14.0))
+                .font_weight(FontWeight::BOLD)
+                .child(format!("⚠ {} already exists. Overwrite? (Y/N)", filename)),
+        )
+    } else {
+        None
+    }
+}
+
 pub fn render_toc_sidebar(
     viewer: &MarkdownViewer,
     theme_colors: &crate::internal::theme::ThemeColors,

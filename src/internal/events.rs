@@ -132,8 +132,24 @@ pub fn handle_key_down(
                 cx.notify();
                 return;
             }
+            "e" => {
+                debug!("Export to PDF (Cmd+E)");
+                // Trigger PDF export
+                // We'll handle the actual export in the viewer's render method via an action
+                viewer.trigger_pdf_export = true;
+                cx.notify();
+                return;
+            }
             _ => {}
         }
+    }
+
+    // Also handle Ctrl+E on non-Mac platforms
+    if event.keystroke.modifiers.control && event.keystroke.key.as_str() == "e" {
+        debug!("Export to PDF (Ctrl+E)");
+        viewer.trigger_pdf_export = true;
+        cx.notify();
+        return;
     }
 
     // Handle Escape to close help overlay
@@ -141,6 +157,34 @@ pub fn handle_key_down(
         viewer.show_help = false;
         cx.notify();
         return;
+    }
+
+    // Handle Escape to close PDF export notification
+    if viewer.pdf_export_message.is_some() && event.keystroke.key.as_str() == "escape" {
+        viewer.pdf_export_message = None;
+        cx.notify();
+        return;
+    }
+
+    // Handle PDF overwrite confirmation (Y/N)
+    if viewer.show_pdf_overwrite_confirm {
+        match event.keystroke.key.as_str() {
+            "y" | "Y" => {
+                debug!("User confirmed PDF overwrite");
+                viewer.show_pdf_overwrite_confirm = false;
+                // Export will happen in render() when show_pdf_overwrite_confirm is false
+                cx.notify();
+                return;
+            }
+            "n" | "N" | "escape" => {
+                debug!("User cancelled PDF overwrite");
+                viewer.show_pdf_overwrite_confirm = false;
+                viewer.pdf_overwrite_path = None;
+                cx.notify();
+                return;
+            }
+            _ => {}
+        }
     }
 
     // Handle search mode input

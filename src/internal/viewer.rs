@@ -78,6 +78,16 @@ pub struct MarkdownViewer {
     pub show_goto_line: bool,
     /// Current go-to-line input text
     pub goto_line_input: String,
+    /// Whether to trigger PDF export
+    pub trigger_pdf_export: bool,
+    /// PDF export result message (Some when showing notification)
+    pub pdf_export_message: Option<String>,
+    /// Whether PDF export was successful (for coloring the notification)
+    pub pdf_export_success: bool,
+    /// Whether showing PDF overwrite confirmation
+    pub show_pdf_overwrite_confirm: bool,
+    /// Path of PDF to potentially overwrite
+    pub pdf_overwrite_path: Option<std::path::PathBuf>,
 }
 
 impl MarkdownViewer {
@@ -125,6 +135,11 @@ impl MarkdownViewer {
             toc_max_scroll_y: 0.0,
             show_goto_line: false,
             goto_line_input: String::new(),
+            trigger_pdf_export: false,
+            pdf_export_message: None,
+            pdf_export_success: false,
+            show_pdf_overwrite_confirm: false,
+            pdf_overwrite_path: None,
         };
 
         viewer.recompute_max_scroll();
@@ -258,6 +273,31 @@ impl MarkdownViewer {
         self.scroll_state.scroll_y = centered_y.min(self.scroll_state.max_scroll_y);
 
         Ok(())
+    }
+
+    /// Perform PDF export and set notification message
+    fn perform_pdf_export(&mut self, pdf_path: &std::path::Path) {
+        debug!("PDF export triggered, output path: {:?}", pdf_path);
+
+        // Perform export using pdf_export module
+        match crate::internal::pdf_export::export_to_pdf(&self.markdown_content, pdf_path) {
+            Ok(()) => {
+                info!("Successfully exported PDF to {:?}", pdf_path);
+                // Show success notification
+                let filename = pdf_path
+                    .file_name()
+                    .and_then(|n| n.to_str())
+                    .unwrap_or("output.pdf");
+                self.pdf_export_message = Some(format!("✓ PDF exported: {}", filename));
+                self.pdf_export_success = true;
+            }
+            Err(e) => {
+                warn!("Failed to export PDF: {}", e);
+                // Show error notification
+                self.pdf_export_message = Some(format!("✗ PDF export failed: {}", e));
+                self.pdf_export_success = false;
+            }
+        }
     }
 
     /// Calculates the height of the content using smart logic (wrapping, images, etc.)
@@ -801,6 +841,20 @@ impl Render for MarkdownViewer {
             element
         };
 
+        // PDF Export Notification Overlay
+        let element = if let Some(overlay) = ui::render_pdf_export_overlay(self, &theme_colors) {
+            element.child(overlay)
+        } else {
+            element
+        };
+
+        // PDF Overwrite Confirmation Overlay
+        let element = if let Some(overlay) = ui::render_pdf_overwrite_confirm(self, &theme_colors) {
+            element.child(overlay)
+        } else {
+            element
+        };
+
         // TOC Sidebar
         let element = if let Some(sidebar) = ui::render_toc_sidebar(self, &theme_colors, cx) {
             element.child(sidebar)
@@ -813,6 +867,40 @@ impl Render for MarkdownViewer {
 
         for path in missing_images {
             self.load_image(path, window, cx);
+        }
+
+        // Handle PDF export trigger
+        if self.trigger_pdf_export {
+            self.trigger_pdf_export = false;
+
+            // Generate output path from markdown file path
+            let pdf_path = self.markdown_file_path.with_extension("pdf");
+
+            // Check if file already exists
+            if pdf_path.exists() {
+                // Show confirmation prompt
+                debug!(
+                    "PDF file already exists, prompting for confirmation: {:?}",
+                    pdf_path
+                );
+                self.show_pdf_overwrite_confirm = true;
+                self.pdf_overwrite_path = Some(pdf_path);
+                cx.notify();
+            } else {
+                // File doesn't exist, export directly
+                self.perform_pdf_export(&pdf_path);
+                cx.notify();
+            }
+        }
+
+        // Handle PDF overwrite confirmation
+        if let Some(pdf_path) = self.pdf_overwrite_path.clone()
+            && !self.show_pdf_overwrite_confirm
+        {
+            // User confirmed, perform export
+            self.perform_pdf_export(&pdf_path);
+            self.pdf_overwrite_path = None;
+            cx.notify();
         }
 
         element
