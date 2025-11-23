@@ -224,7 +224,7 @@ pub fn render_pdf_overwrite_confirm(
 }
 
 pub fn render_toc_sidebar(
-    viewer: &MarkdownViewer,
+    viewer: &mut MarkdownViewer,
     theme_colors: &crate::internal::theme::ThemeColors,
     cx: &mut gpui::Context<MarkdownViewer>,
 ) -> Option<impl IntoElement> {
@@ -249,6 +249,8 @@ pub fn render_toc_sidebar(
             let is_active = current_section_idx == Some(idx);
             let indent = (entry.level as f32 - 1.0) * TOC_INDENT_PER_LEVEL;
             let line_number = entry.line_number;
+
+            // Note: TOC items are NOT tracked as focusable (excluded from tab navigation)
 
             div()
                 .px(px(8.0 + indent))
@@ -314,12 +316,14 @@ pub fn render_toc_sidebar(
 }
 
 pub fn render_toc_toggle_button(
-    viewer: &MarkdownViewer,
+    viewer: &mut MarkdownViewer,
     cx: &mut gpui::Context<MarkdownViewer>,
 ) -> impl IntoElement {
     use crate::internal::style::{
         TOC_TOGGLE_BG_COLOR, TOC_TOGGLE_HOVER_COLOR, TOC_TOGGLE_TEXT_COLOR,
     };
+
+    // Note: TOC toggle is NOT tracked as focusable (excluded from tab navigation)
 
     div()
         .absolute()
@@ -346,13 +350,16 @@ pub fn render_toc_toggle_button(
 }
 
 pub fn render_bookmarks_overlay(
-    viewer: &MarkdownViewer,
+    viewer: &mut MarkdownViewer,
     theme_colors: &crate::internal::theme::ThemeColors,
     cx: &mut gpui::Context<MarkdownViewer>,
 ) -> Option<impl IntoElement> {
     if !viewer.show_bookmarks {
         return None;
     }
+
+    use crate::internal::style::FOCUS_BG_COLOR;
+    use crate::internal::viewer::FocusableElement;
 
     let bookmarks_list = if viewer.bookmarks.is_empty() {
         div()
@@ -369,10 +376,19 @@ pub fn render_bookmarks_overlay(
                 .iter()
                 .enumerate()
                 .map(|(idx, &line_number)| {
+                    // Track this bookmark item as focusable
+                    let element_index = viewer.focusable_elements.len();
+                    viewer
+                        .focusable_elements
+                        .push(FocusableElement::BookmarkItem(line_number));
+
+                    let is_focused = viewer.current_focus_index == Some(element_index);
+
                     div()
                         .px_4()
                         .py_2()
                         .cursor_pointer()
+                        .when(is_focused, |div| div.bg(FOCUS_BG_COLOR))
                         .hover(|div| div.bg(theme_colors.toc_hover_color))
                         .text_color(theme_colors.text_color)
                         .on_mouse_down(
@@ -388,6 +404,13 @@ pub fn render_bookmarks_overlay(
                 .collect::<Vec<_>>(),
         )
     };
+
+    // Track close button as focusable
+    let close_button_index = viewer.focusable_elements.len();
+    viewer
+        .focusable_elements
+        .push(FocusableElement::BookmarksCloseButton);
+    let close_button_focused = viewer.current_focus_index == Some(close_button_index);
 
     Some(
         div()
@@ -424,6 +447,7 @@ pub fn render_bookmarks_overlay(
                                 div()
                                     .cursor_pointer()
                                     .text_color(theme_colors.text_color)
+                                    .when(close_button_focused, |div| div.bg(FOCUS_BG_COLOR).px_1())
                                     .on_mouse_down(
                                         gpui::MouseButton::Left,
                                         cx.listener(|this, _, _, cx| {

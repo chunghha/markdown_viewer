@@ -182,6 +182,7 @@ fn render_markdown_ast_internal<'a, T: 'static>(
     current_theme: super::theme::Theme,
     cx: &mut Context<T>,
     image_loader: &mut dyn FnMut(&str) -> Option<ImageSource>,
+    focused_element: Option<&super::viewer::FocusableElement>,
 ) -> AnyElement {
     match &node.data.borrow().value {
         NodeValue::Document => div()
@@ -196,6 +197,7 @@ fn render_markdown_ast_internal<'a, T: 'static>(
                     current_theme,
                     cx,
                     image_loader,
+                    focused_element,
                 )
             }))
             .into_any_element(),
@@ -220,6 +222,7 @@ fn render_markdown_ast_internal<'a, T: 'static>(
                     current_theme,
                     cx,
                     image_loader,
+                    focused_element,
                 )
             }))
             .into_any_element()
@@ -253,6 +256,7 @@ fn render_markdown_ast_internal<'a, T: 'static>(
                             current_theme,
                             cx,
                             image_loader,
+                            focused_element,
                         )
                     }))
                     .into_any_element()
@@ -308,6 +312,7 @@ fn render_markdown_ast_internal<'a, T: 'static>(
                         current_theme,
                         cx,
                         image_loader,
+                        focused_element,
                     )
                 }));
                 items.push(
@@ -417,6 +422,13 @@ fn render_markdown_ast_internal<'a, T: 'static>(
 
             debug!("Rendering link '{}' -> '{}'", link_text, url);
 
+            // Check if this link is currently focused
+            let is_focused = if let Some(focused_el) = focused_element {
+                matches!(focused_el, super::viewer::FocusableElement::Link(focused_url) if focused_url == &url)
+            } else {
+                false
+            };
+
             // If URL is empty, render it as plain text (muted) and do not attach
             // a click handler. Otherwise, style it as a link and attach a handler
             // that opens the URL in the system browser.
@@ -432,6 +444,7 @@ fn render_markdown_ast_internal<'a, T: 'static>(
                     .text_color(theme_colors.link_color)
                     .underline()
                     .cursor_pointer()
+                    .when(is_focused, |div| div.font_weight(FontWeight::BOLD))
                     .hover(|style| style.text_color(theme_colors.hover_link_color))
                     .id(SharedString::from(url.clone()))
                     .on_mouse_down(
@@ -465,6 +478,7 @@ fn render_markdown_ast_internal<'a, T: 'static>(
                     current_theme,
                     cx,
                     image_loader,
+                    focused_element,
                 )
             }))
             .into_any_element(),
@@ -481,6 +495,7 @@ fn render_markdown_ast_internal<'a, T: 'static>(
                     current_theme,
                     cx,
                     image_loader,
+                    focused_element,
                 )
             }))
             .into_any_element(),
@@ -497,6 +512,7 @@ fn render_markdown_ast_internal<'a, T: 'static>(
                     current_theme,
                     cx,
                     image_loader,
+                    focused_element,
                 )
             }))
             .into_any_element(),
@@ -516,6 +532,7 @@ fn render_markdown_ast_internal<'a, T: 'static>(
                     current_theme,
                     cx,
                     image_loader,
+                    focused_element,
                 )
             }))
             .into_any_element(),
@@ -551,6 +568,7 @@ fn render_markdown_ast_internal<'a, T: 'static>(
                         current_theme,
                         cx,
                         image_loader,
+                        focused_element,
                     )
                 }))
                 .into_any_element()
@@ -571,6 +589,7 @@ fn render_markdown_ast_internal<'a, T: 'static>(
                         current_theme,
                         cx,
                         image_loader,
+                        focused_element,
                     )
                 }))
                 .into_any_element()
@@ -590,6 +609,7 @@ fn render_markdown_ast_internal<'a, T: 'static>(
                         current_theme,
                         cx,
                         image_loader,
+                        focused_element,
                     )
                 }))
                 .into_any_element()
@@ -607,6 +627,7 @@ fn render_markdown_ast_internal<'a, T: 'static>(
                     current_theme,
                     cx,
                     image_loader,
+                    focused_element,
                 )
             }))
             .into_any_element(),
@@ -635,6 +656,7 @@ pub fn render_markdown_ast<'a, T: 'static>(
         current_theme,
         cx,
         &mut |_| None,
+        None,
     )
 }
 
@@ -659,6 +681,7 @@ pub fn render_markdown_ast_with_loader<'a, T: 'static>(
         current_theme,
         cx,
         image_loader,
+        None,
     )
 }
 
@@ -675,6 +698,7 @@ pub fn render_markdown_ast_with_search<'a, T: 'static>(
     current_theme: super::theme::Theme,
     cx: &mut Context<T>,
     image_loader: &mut dyn FnMut(&str) -> Option<ImageSource>,
+    focused_element: Option<&super::viewer::FocusableElement>,
 ) -> AnyElement {
     render_markdown_ast_internal(
         node,
@@ -685,6 +709,7 @@ pub fn render_markdown_ast_with_search<'a, T: 'static>(
         current_theme,
         cx,
         image_loader,
+        focused_element,
     )
 }
 
@@ -701,6 +726,7 @@ fn render_table_row<'a, T: 'static>(
     current_theme: super::theme::Theme,
     cx: &mut Context<T>,
     image_loader: &mut dyn FnMut(&str) -> Option<ImageSource>,
+    focused_element: Option<&super::viewer::FocusableElement>,
 ) -> AnyElement {
     let is_header = matches!(row_node.data.borrow().value, NodeValue::TableRow(true));
 
@@ -732,6 +758,7 @@ fn render_table_row<'a, T: 'static>(
                 current_theme,
                 cx,
                 image_loader,
+                focused_element,
             )
         })
         .collect();
@@ -752,6 +779,7 @@ fn render_table_cell<'a, T: 'static>(
     current_theme: super::theme::Theme,
     cx: &mut Context<T>,
     image_loader: &mut dyn FnMut(&str) -> Option<ImageSource>,
+    focused_element: Option<&super::viewer::FocusableElement>,
 ) -> AnyElement {
     use comrak::nodes::TableAlignment;
 
@@ -783,6 +811,7 @@ fn render_table_cell<'a, T: 'static>(
                 current_theme,
                 cx,
                 image_loader,
+                focused_element,
             )
         }))
         .into_any_element()
@@ -798,7 +827,7 @@ fn render_table_cell<'a, T: 'static>(
 /// # Returns
 /// * `Ok(())` if the command was spawned successfully
 /// * `Err` if spawning the command failed
-fn open_url(url: &str) -> Result<(), Box<dyn std::error::Error>> {
+pub fn open_url(url: &str) -> Result<(), Box<dyn std::error::Error>> {
     #[cfg(target_os = "macos")]
     {
         std::process::Command::new("open").arg(url).spawn()?;

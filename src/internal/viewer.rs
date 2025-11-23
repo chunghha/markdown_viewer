@@ -33,6 +33,23 @@ pub const PLACEHOLDER_HEIGHT: f32 = 800.0;
 /// Container padding applied by the renderer (.pt_4() + .pb_4() = ~16px * 2)
 pub const CONTAINER_PADDING: f32 = 32.0;
 
+/// Represents different types of interactive elements that can receive keyboard focus
+#[derive(Debug, Clone, PartialEq)]
+pub enum FocusableElement {
+    /// A clickable link with its URL
+    Link(String),
+    /// A TOC item with its line number
+    TocItem(usize),
+    /// The TOC toggle button
+    TocToggleButton,
+    /// Copy button for a code block (identified by code content hash)
+    CopyButton(String),
+    /// A bookmark item with its list index
+    BookmarkItem(usize),
+    /// Close button for bookmarks overlay
+    BookmarksCloseButton,
+}
+
 pub enum ImageState {
     Loading,
     Loaded(ImageSource),
@@ -96,6 +113,10 @@ pub struct MarkdownViewer {
     pub show_bookmarks: bool,
     /// Message to show when search history is cleared/saved
     pub search_history_message: Option<String>,
+    /// List of focusable elements found during render (for keyboard navigation)
+    pub focusable_elements: Vec<FocusableElement>,
+    /// Index of the currently focused element (None means no focus)
+    pub current_focus_index: Option<usize>,
 }
 
 impl MarkdownViewer {
@@ -152,6 +173,8 @@ impl MarkdownViewer {
             bookmarks: Vec::new(),
             show_bookmarks: false,
             search_history_message: None,
+            focusable_elements: Vec::new(),
+            current_focus_index: None,
         };
 
         viewer.recompute_max_scroll();
@@ -298,8 +321,115 @@ impl MarkdownViewer {
         // A more accurate approach would reverse calculate_y_for_line
         let line_index = (scroll_y / avg_line_height).floor() as usize;
         let total_lines = self.markdown_content.lines().count();
-
         (line_index + 1).min(total_lines).max(1)
+    }
+
+    /// Move focus to the next focusable element (Tab key)
+    pub fn focus_next(&mut self) {
+        if self.focusable_elements.is_empty() {
+            self.current_focus_index = None;
+            return;
+        }
+
+        self.current_focus_index = Some(match self.current_focus_index {
+            None => 0,
+            Some(idx) => {
+                if idx + 1 >= self.focusable_elements.len() {
+                    0 // Wrap around to first element
+                } else {
+                    idx + 1
+                }
+            }
+        });
+        debug!(
+            "Focus next: index {:?}/{}",
+            self.current_focus_index,
+            self.focusable_elements.len()
+        );
+    }
+
+    /// Move focus to the previous focusable element (Shift+Tab key)
+    pub fn focus_previous(&mut self) {
+        if self.focusable_elements.is_empty() {
+            self.current_focus_index = None;
+            return;
+        }
+
+        self.current_focus_index = Some(match self.current_focus_index {
+            None => self.focusable_elements.len() - 1,
+            Some(idx) => {
+                if idx == 0 {
+                    self.focusable_elements.len() - 1 // Wrap around to last element
+                } else {
+                    idx - 1
+                }
+            }
+        });
+        debug!(
+            "Focus previous: index {:?}/{}",
+            self.current_focus_index,
+            self.focusable_elements.len()
+        );
+    }
+
+    /// Clear keyboard focus
+    pub fn clear_focus(&mut self) {
+        self.current_focus_index = None;
+        debug!("Cleared keyboard focus");
+    }
+
+    /// Activate the currently focused element (Enter key)
+    /// Returns true if an action was performed
+    pub fn activate_focused_element(&mut self) -> bool {
+        if let Some(idx) = self.current_focus_index
+            && let Some(element) = self.focusable_elements.get(idx).cloned()
+        {
+            match element {
+                FocusableElement::Link(url) => {
+                    debug!("Activating focused link: {}", url);
+                    // Open URL in browser
+                    let url_clone = url.clone();
+                    std::thread::spawn(move || {
+                        if let Err(e) = crate::internal::rendering::open_url(&url_clone) {
+                            warn!("Failed to open URL '{}': {}", url_clone, e);
+                        }
+                    });
+                    return true;
+                }
+                FocusableElement::TocItem(line_number) => {
+                    debug!("Activating focused TOC item: line {}", line_number);
+                    // Navigate to the line
+                    let target_y = self.calculate_y_for_line(line_number);
+                    self.scroll_state.scroll_y = target_y.min(self.scroll_state.max_scroll_y);
+                    return true;
+                }
+                FocusableElement::TocToggleButton => {
+                    debug!("Activating TOC toggle button");
+                    self.show_toc = !self.show_toc;
+                    self.recompute_max_scroll();
+                    return true;
+                }
+                FocusableElement::CopyButton(code) => {
+                    debug!("Activating copy button");
+                    // Note: We can't copy to clipboard here without WindowContext
+                    // This will be handled in the render method via a message
+                    info!("Copy button activated for code: {} bytes", code.len());
+                    return true;
+                }
+                FocusableElement::BookmarkItem(line_number) => {
+                    debug!("Activating bookmark item: line {}", line_number);
+                    let _ = self.scroll_to_line(line_number);
+                    self.show_bookmarks = false;
+                    return true;
+                }
+                FocusableElement::BookmarksCloseButton => {
+                    debug!("Activating bookmarks close button");
+                    self.show_bookmarks = false;
+                    return true;
+                }
+            }
+        }
+        false
     }
 
     /// Perform PDF export and set notification message
@@ -647,10 +777,29 @@ impl MarkdownViewer {
         )
         .detach();
     }
+
+    /// Collect all links from a markdown AST node and add them to focusable_elements
+    fn collect_links_from_ast<'a>(&mut self, node: &'a comrak::nodes::AstNode<'a>) {
+        use comrak::nodes::NodeValue;
+
+        if let NodeValue::Link(link) = &node.data.borrow().value
+            && !link.url.trim().is_empty()
+        {
+            self.focusable_elements
+                .push(FocusableElement::Link(link.url.clone()));
+        }
+
+        for child in node.children() {
+            self.collect_links_from_ast(child);
+        }
+    }
 }
 
 impl Render for MarkdownViewer {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        // Clear focusable elements list - will be rebuilt during this render pass
+        self.focusable_elements.clear();
+
         // Poll file watcher for events (non-blocking)
         // Collect events first to avoid borrow checker issues
         let mut events = Vec::new();
@@ -739,6 +888,10 @@ impl Render for MarkdownViewer {
         options.extension.table = true; // Enable GFM tables
         let root = parse_document(&arena, &self.markdown_content, &options);
 
+        // Collect all links from the markdown AST for keyboard navigation
+        self.collect_links_from_ast(root);
+
+        debug!("AST parsing complete");
         let mut missing_images = HashSet::new();
         let theme_colors = get_theme_colors(self.config.theme.theme);
         let element = div()
@@ -838,6 +991,8 @@ impl Render for MarkdownViewer {
                                     None
                                 }
                             },
+                            self.current_focus_index
+                                .and_then(|idx| self.focusable_elements.get(idx)),
                         )),
                 ),
             )

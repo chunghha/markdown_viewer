@@ -239,6 +239,52 @@ pub fn handle_key_down(
         }
     }
 
+    // ========== KEYBOARD-ONLY NAVIGATION ==========
+    // Handle Tab/Shift-Tab for focus cycling (only when not in input modes)
+    if viewer.search_state.is_none() && !viewer.show_goto_line {
+        if event.keystroke.key.as_str() == "tab" {
+            if event.keystroke.modifiers.shift {
+                // Shift+Tab: focus previous
+                debug!("Shift+Tab: focus previous element");
+                viewer.focus_previous();
+            } else {
+                // Tab: focus next
+                debug!("Tab: focus next element");
+                viewer.focus_next();
+            }
+            cx.notify();
+            return;
+        }
+
+        // Handle Enter key to activate focused element (when not in input modes)
+        if event.keystroke.key.as_str() == "enter" && viewer.current_focus_index.is_some() {
+            debug!("Enter: activating focused element");
+            if viewer.activate_focused_element() {
+                cx.notify();
+            }
+            return;
+        }
+    }
+
+    // Vi-style navigation (j/k for down/up) - only when not in input modes
+    if viewer.search_state.is_none() && !viewer.show_goto_line {
+        match event.keystroke.key.as_str() {
+            "j" => {
+                debug!("Vi-style: j (scroll down)");
+                viewer.scroll_state.scroll_down(arrow_increment);
+                cx.notify();
+                return;
+            }
+            "k" => {
+                debug!("Vi-style: k (scroll up)");
+                viewer.scroll_state.scroll_up(arrow_increment);
+                cx.notify();
+                return;
+            }
+            _ => {}
+        }
+    }
+
     // Handle search mode input
     if viewer.search_state.is_some() {
         match event.keystroke.key.as_str() {

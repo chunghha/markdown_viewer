@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.0] - 2025-11-23
+
+### Added
+- **Keyboard-Only Navigation**: Complete keyboard accessibility for interactive elements
+  - Tab/Shift-Tab navigation cycles through links, bookmark items, and close buttons
+  - Enter key activates focused elements (links, bookmarks, overlay controls)
+  - Visual focus indicators: **bold font weight** for links, subtle background for UI elements
+  - TOC excluded from tab navigation (remains mouse-only)
+- **Vi-Style Navigation**: `j` and `k` keys for scrolling down/up
+  - Only active when not in search or goto-line input modes
+  - Alternative to arrow keys for vi/vim users
+- **Link Navigation**: Full keyboard support for links in markdown content
+  - Tab cycles through all links in document
+  - Enter opens focused link in browser
+  - Focused links display in bold
+
+### Changed
+- Focus indicators use **bold font weight** for links (clearer than background highlight)
+- UI elements (bookmarks, buttons) use subtle background highlight
+- Tab navigation disabled during search/goto-line input to prevent conflicts
+
 ## [0.10.2] - 2025-11-23
 
 ### Added

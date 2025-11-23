@@ -251,6 +251,27 @@ pub const GOTO_LINE_OVERLAY_TEXT_COLOR: Rgba = Rgba {
     a: 1.0,
 };
 
+// ---- Keyboard Focus Indicators -----------------------------------------
+
+/// Focus ring color for keyboard navigation (blue)
+pub const FOCUS_RING_COLOR: Rgba = Rgba {
+    r: 0.0,
+    g: 0.4,
+    b: 0.8,
+    a: 1.0,
+};
+
+/// Background color for focused elements
+pub const FOCUS_BG_COLOR: Rgba = Rgba {
+    r: 0.678,
+    g: 0.847,
+    b: 1.0,
+    a: 0.25,
+};
+
+/// Focus ring width in pixels
+pub const FOCUS_RING_WIDTH: f32 = 2.0;
+
 // ---- Theme-based Color Access -----------------------------------------
 
 /// Get theme colors for the given theme
