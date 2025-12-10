@@ -48,12 +48,15 @@ fn calculate_column_width(num_columns: usize, viewport_width: f32) -> (f32, bool
     let available_width = viewport_width - TABLE_HORIZONTAL_PADDING;
     let equal_width = available_width / num_columns as f32;
 
-    if equal_width < MIN_COLUMN_WIDTH {
-        // Use minimum width and enable horizontal scrolling
-        (MIN_COLUMN_WIDTH, true)
-    } else {
-        // Use equal distribution, no scrolling needed
-        (equal_width, false)
+    match equal_width < MIN_COLUMN_WIDTH {
+        true => {
+            // Use minimum width and enable horizontal scrolling
+            (MIN_COLUMN_WIDTH, true)
+        }
+        false => {
+            // Use equal distribution, no scrolling needed
+            (equal_width, false)
+        }
     }
 }
 
@@ -267,16 +270,19 @@ fn render_markdown_ast_internal<'a, T: 'static>(
             let text_str = String::from_utf8_lossy(text.as_bytes()).to_string();
 
             // Use search highlighting if search is active
-            if let Some(search_state) = search_state {
-                let elements =
-                    super::text_highlight::render_text_with_search(&text_str, Some(search_state));
-                div()
-                    .flex()
-                    .flex_row()
-                    .children(elements)
-                    .into_any_element()
-            } else {
-                div().child(text_str).into_any_element()
+            match search_state {
+                Some(search_state) => {
+                    let elements = super::text_highlight::render_text_with_search(
+                        &text_str,
+                        Some(search_state),
+                    );
+                    div()
+                        .flex()
+                        .flex_row()
+                        .children(elements)
+                        .into_any_element()
+                }
+                None => div().child(text_str).into_any_element(),
             }
         }
 
@@ -336,16 +342,15 @@ fn render_markdown_ast_internal<'a, T: 'static>(
             debug!("Rendering image '{}' -> '{}'", alt_text, image_url);
 
             // Resolve image path
-            let resolved_path = if let Some(md_path) = markdown_file_path {
-                resolve_image_path(&image_url, md_path)
-            } else {
-                image_url.to_string()
+            let resolved_path = match markdown_file_path {
+                Some(md_path) => resolve_image_path(&image_url, md_path),
+                None => image_url.to_string(),
             };
 
             debug!("Resolved image path: {}", resolved_path);
 
-            if let Some(source) = image_loader(&resolved_path) {
-                div()
+            match image_loader(&resolved_path) {
+                Some(source) => div()
                     .w_full()
                     .flex()
                     .justify_center()
@@ -356,62 +361,62 @@ fn render_markdown_ast_internal<'a, T: 'static>(
                             .object_fit(gpui::ObjectFit::Contain)
                             .rounded(px(IMAGE_BORDER_RADIUS)),
                     )
-                    .into_any_element()
-            } else {
-                // Show placeholder
-                div()
-                    .w_full()
-                    .flex()
-                    .flex_col()
-                    .items_center()
-                    .my_2()
-                    .p_4()
-                    .bg(Rgba {
-                        r: 0.95,
-                        g: 0.95,
-                        b: 0.95,
-                        a: 1.0,
-                    })
-                    .border_1()
-                    .border_color(Rgba {
-                        r: 0.8,
-                        g: 0.8,
-                        b: 0.8,
-                        a: 1.0,
-                    })
-                    .rounded(px(IMAGE_BORDER_RADIUS))
-                    .child(
-                        div()
-                            .text_color(Rgba {
-                                r: 0.4,
-                                g: 0.4,
-                                b: 0.4,
-                                a: 1.0,
-                            })
-                            .font_weight(FontWeight::BOLD)
-                            .mb_2()
-                            .child("🖼️ Image"),
-                    )
-                    .child(div().text_color(theme_colors.text_color).child(
-                        if !alt_text.is_empty() {
-                            alt_text
-                        } else {
-                            "Image".to_string()
-                        },
-                    ))
-                    .child(
-                        div()
-                            .text_size(px(12.0))
-                            .text_color(Rgba {
-                                r: 0.5,
-                                g: 0.5,
-                                b: 0.5,
-                                a: 1.0,
-                            })
-                            .mt_1()
-                            .child(resolved_path),
-                    )
-                    .into_any_element()
+                    .into_any_element(),
+                None => {
+                    // Show placeholder
+                    div()
+                        .w_full()
+                        .flex()
+                        .flex_col()
+                        .items_center()
+                        .my_2()
+                        .p_4()
+                        .bg(Rgba {
+                            r: 0.95,
+                            g: 0.95,
+                            b: 0.95,
+                            a: 1.0,
+                        })
+                        .border_1()
+                        .border_color(Rgba {
+                            r: 0.8,
+                            g: 0.8,
+                            b: 0.8,
+                            a: 1.0,
+                        })
+                        .rounded(px(IMAGE_BORDER_RADIUS))
+                        .child(
+                            div()
+                                .text_color(Rgba {
+                                    r: 0.4,
+                                    g: 0.4,
+                                    b: 0.4,
+                                    a: 1.0,
+                                })
+                                .font_weight(FontWeight::BOLD)
+                                .mb_2()
+                                .child("🖼️ Image"),
+                        )
+                        .child(div().text_color(theme_colors.text_color).child(
+                            match alt_text.is_empty() {
+                                false => alt_text,
+                                true => "Image".to_string(),
+                            },
+                        ))
+                        .child(
+                            div()
+                                .text_size(px(12.0))
+                                .text_color(Rgba {
+                                    r: 0.5,
+                                    g: 0.5,
+                                    b: 0.5,
+                                    a: 1.0,
+                                })
+                                .mt_1()
+                                .child(resolved_path),
+                        )
+                        .into_any_element()
+                }
             }
         }
 
@@ -423,46 +428,51 @@ fn render_markdown_ast_internal<'a, T: 'static>(
             debug!("Rendering link '{}' -> '{}'", link_text, url);
 
             // Check if this link is currently focused
-            let is_focused = if let Some(focused_el) = focused_element {
-                matches!(focused_el, super::viewer::FocusableElement::Link(focused_url) if focused_url == &url)
-            } else {
-                false
+            let is_focused = match focused_element {
+                Some(focused_el) => {
+                    matches!(focused_el, super::viewer::FocusableElement::Link(focused_url) if focused_url == &url)
+                }
+                None => false,
             };
 
             // If URL is empty, render it as plain text (muted) and do not attach
             // a click handler. Otherwise, style it as a link and attach a handler
             // that opens the URL in the system browser.
-            if url.trim().is_empty() {
-                div()
+            match url.trim() {
+                "" => div()
                     .text_color(theme_colors.text_color)
                     .child(link_text)
-                    .into_any_element()
-            } else {
-                // clickable
-                let click_url = url.clone();
-                div()
-                    .text_color(theme_colors.link_color)
-                    .underline()
-                    .cursor_pointer()
-                    .when(is_focused, |div| div.font_weight(FontWeight::BOLD))
-                    .hover(|style| style.text_color(theme_colors.hover_link_color))
-                    .id(SharedString::from(url.clone()))
-                    .on_mouse_down(
-                        MouseButton::Left,
-                        cx.listener(move |_, _, _, _| {
-                            debug!("Mouse down detected on link: {}", click_url);
-                            // Log and open the URL on a background thread.
-                            let url_to_open = click_url.clone();
-                            std::thread::spawn(move || match open_url(&url_to_open) {
-                                Ok(_) => {
-                                    debug!("Successfully spawned open command for {}", url_to_open)
-                                }
-                                Err(e) => error!("Failed to open URL '{}': {}", url_to_open, e),
-                            });
-                        }),
-                    )
-                    .child(link_text)
-                    .into_any_element()
+                    .into_any_element(),
+                _ => {
+                    // clickable
+                    let click_url = url.clone();
+                    div()
+                        .text_color(theme_colors.link_color)
+                        .underline()
+                        .cursor_pointer()
+                        .when(is_focused, |div| div.font_weight(FontWeight::BOLD))
+                        .hover(|style| style.text_color(theme_colors.hover_link_color))
+                        .id(SharedString::from(url.clone()))
+                        .on_mouse_down(
+                            MouseButton::Left,
+                            cx.listener(move |_, _, _, _| {
+                                debug!("Mouse down detected on link: {}", click_url);
+                                // Log and open the URL on a background thread.
+                                let url_to_open = click_url.clone();
+                                std::thread::spawn(move || match open_url(&url_to_open) {
+                                    Ok(_) => {
+                                        debug!(
+                                            "Successfully spawned open command for {}",
+                                            url_to_open
+                                        )
+                                    }
+                                    Err(e) => error!("Failed to open URL '{}': {}", url_to_open, e),
+                                });
+                            }),
+                        )
+                        .child(link_text)
+                        .into_any_element()
+                }
             }
         }
 

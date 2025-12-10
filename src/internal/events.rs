@@ -29,15 +29,18 @@ pub fn handle_key_down(
         && (event.keystroke.modifiers.platform || event.keystroke.modifiers.control)
     {
         debug!("Search shortcut triggered (Cmd/Ctrl+F)");
-        if viewer.search_state.is_some() {
-            // Exit search mode
-            debug!("Exiting search mode");
-            viewer.search_state = None;
-            viewer.search_input.clear();
-        } else {
-            // Enter search mode
-            debug!("Entering search mode");
-            viewer.search_state = Some(SearchState::new(String::new(), &viewer.markdown_content));
+        match viewer.search_state.take() {
+            Some(_) => {
+                // Exit search mode
+                debug!("Exiting search mode");
+                viewer.search_input.clear();
+            }
+            None => {
+                // Enter search mode
+                debug!("Entering search mode");
+                viewer.search_state =
+                    Some(SearchState::new(String::new(), &viewer.markdown_content));
+            }
         }
         cx.notify();
         return;
@@ -48,16 +51,19 @@ pub fn handle_key_down(
         && (event.keystroke.modifiers.platform || event.keystroke.modifiers.control)
     {
         debug!("Go-to-line shortcut triggered (Cmd/Ctrl+G)");
-        if viewer.show_goto_line {
-            // Exit go-to-line mode
-            debug!("Exiting go-to-line mode");
-            viewer.show_goto_line = false;
-            viewer.goto_line_input.clear();
-        } else {
-            // Enter go-to-line mode
-            debug!("Entering go-to-line mode");
-            viewer.show_goto_line = true;
-            viewer.goto_line_input.clear();
+        match viewer.show_goto_line {
+            true => {
+                // Exit go-to-line mode
+                debug!("Exiting go-to-line mode");
+                viewer.show_goto_line = false;
+                viewer.goto_line_input.clear();
+            }
+            false => {
+                // Enter go-to-line mode
+                debug!("Entering go-to-line mode");
+                viewer.show_goto_line = true;
+                viewer.goto_line_input.clear();
+            }
         }
         cx.notify();
         return;
@@ -72,12 +78,15 @@ pub fn handle_key_down(
         viewer.config.search_history.clear();
         viewer.search_history_index = None;
         // Save config
-        if let Err(e) = viewer.config.save_to_file("config.ron") {
-            debug!("Failed to save cleared search history: {}", e);
-            viewer.search_history_message = Some(format!("Failed to save: {}", e));
-        } else {
-            info!("Search history cleared");
-            viewer.search_history_message = Some("Search history cleared".to_string());
+        match viewer.config.save_to_file("config.ron") {
+            Err(e) => {
+                debug!("Failed to save cleared search history: {}", e);
+                viewer.search_history_message = Some(format!("Failed to save: {}", e));
+            }
+            Ok(_) => {
+                info!("Search history cleared");
+                viewer.search_history_message = Some("Search history cleared".to_string());
+            }
         }
         cx.notify();
         return;
@@ -117,15 +126,18 @@ pub fn handle_key_down(
         debug!("Toggle bookmark shortcut triggered (Cmd/Ctrl+D)");
         let current_line = viewer.get_current_line_number();
 
-        if let Some(pos) = viewer.bookmarks.iter().position(|&l| l == current_line) {
-            // Remove existing bookmark
-            viewer.bookmarks.remove(pos);
-            debug!("Removed bookmark at line {}", current_line);
-        } else {
-            // Add new bookmark
-            viewer.bookmarks.push(current_line);
-            viewer.bookmarks.sort(); // Keep sorted
-            debug!("Added bookmark at line {}", current_line);
+        match viewer.bookmarks.iter().position(|&l| l == current_line) {
+            Some(pos) => {
+                // Remove existing bookmark
+                viewer.bookmarks.remove(pos);
+                debug!("Removed bookmark at line {}", current_line);
+            }
+            None => {
+                // Add new bookmark
+                viewer.bookmarks.push(current_line);
+                viewer.bookmarks.sort(); // Keep sorted
+                debug!("Added bookmark at line {}", current_line);
+            }
         }
         cx.notify();
         return;
@@ -243,14 +255,17 @@ pub fn handle_key_down(
     // Handle Tab/Shift-Tab for focus cycling (only when not in input modes)
     if viewer.search_state.is_none() && !viewer.show_goto_line {
         if event.keystroke.key.as_str() == "tab" {
-            if event.keystroke.modifiers.shift {
-                // Shift+Tab: focus previous
-                debug!("Shift+Tab: focus previous element");
-                viewer.focus_previous();
-            } else {
-                // Tab: focus next
-                debug!("Tab: focus next element");
-                viewer.focus_next();
+            match event.keystroke.modifiers.shift {
+                true => {
+                    // Shift+Tab: focus previous
+                    debug!("Shift+Tab: focus previous element");
+                    viewer.focus_previous();
+                }
+                false => {
+                    // Tab: focus next
+                    debug!("Tab: focus next element");
+                    viewer.focus_next();
+                }
             }
             cx.notify();
             return;
@@ -324,10 +339,13 @@ pub fn handle_key_down(
                             history.remove(0);
                         }
                         // Save config
-                        if let Err(e) = viewer.config.save_to_file("config.ron") {
-                            debug!("Failed to save search history: {}", e);
-                        } else {
-                            info!("Saved to search history: '{}'", input);
+                        match viewer.config.save_to_file("config.ron") {
+                            Err(e) => {
+                                debug!("Failed to save search history: {}", e);
+                            }
+                            Ok(_) => {
+                                info!("Saved to search history: '{}'", input);
+                            }
                         }
                     }
                 }
@@ -367,23 +385,25 @@ pub fn handle_key_down(
                 // Navigate history forward
                 if let Some(i) = viewer.search_history_index {
                     let history_len = viewer.config.search_history.len();
-                    if i + 1 < history_len {
-                        let new_index = i + 1;
-                        viewer.search_history_index = Some(new_index);
-                        if let Some(item) = viewer.config.search_history.get(new_index) {
-                            viewer.search_input = item.clone();
-                            viewer.search_state = Some(SearchState::new(
-                                viewer.search_input.clone(),
-                                &viewer.markdown_content,
-                            ));
-                            viewer.scroll_to_current_match();
+                    match i.checked_add(1) {
+                        Some(new_index) if new_index < history_len => {
+                            viewer.search_history_index = Some(new_index);
+                            if let Some(item) = viewer.config.search_history.get(new_index) {
+                                viewer.search_input = item.clone();
+                                viewer.search_state = Some(SearchState::new(
+                                    viewer.search_input.clone(),
+                                    &viewer.markdown_content,
+                                ));
+                                viewer.scroll_to_current_match();
+                            }
                         }
-                    } else {
-                        // End of history, clear input
-                        viewer.search_history_index = None;
-                        viewer.search_input.clear();
-                        viewer.search_state =
-                            Some(SearchState::new(String::new(), &viewer.markdown_content));
+                        _ => {
+                            // End of history, clear input
+                            viewer.search_history_index = None;
+                            viewer.search_input.clear();
+                            viewer.search_state =
+                                Some(SearchState::new(String::new(), &viewer.markdown_content));
+                        }
                     }
                     cx.notify();
                 }
@@ -436,10 +456,8 @@ pub fn handle_key_down(
             "enter" => {
                 // Execute go-to-line
                 debug!("Go-to-line execute: '{}'", viewer.goto_line_input);
-                if let Some(line_number) =
-                    MarkdownViewer::parse_line_number(&viewer.goto_line_input)
-                {
-                    match viewer.scroll_to_line(line_number) {
+                match MarkdownViewer::parse_line_number(&viewer.goto_line_input) {
+                    Some(line_number) => match viewer.scroll_to_line(line_number) {
                         Ok(()) => {
                             debug!("Scrolled to line {}", line_number);
                             viewer.show_goto_line = false;
@@ -449,10 +467,11 @@ pub fn handle_key_down(
                             debug!("Failed to scroll to line {}: {}", line_number, e);
                             // Keep dialog open to show error (could add error message display later)
                         }
+                    },
+                    None => {
+                        debug!("Invalid line number: '{}'", viewer.goto_line_input);
+                        // Keep dialog open for invalid input
                     }
-                } else {
-                    debug!("Invalid line number: '{}'", viewer.goto_line_input);
-                    // Keep dialog open for invalid input
                 }
                 cx.notify();
                 return;
@@ -513,10 +532,9 @@ pub fn handle_scroll_wheel(
         .pixel_delta(px(viewer.config.theme.base_text_size))
         .y;
     let delta_f32: f32 = delta.into();
-    if delta_f32 > 0.0 {
-        viewer.scroll_state.scroll_up(delta_f32);
-    } else {
-        viewer.scroll_state.scroll_down(-delta_f32);
+    match delta_f32 {
+        d if d > 0.0 => viewer.scroll_state.scroll_up(d),
+        d => viewer.scroll_state.scroll_down(-d),
     }
     cx.notify();
 }

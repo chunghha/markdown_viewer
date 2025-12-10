@@ -85,11 +85,14 @@ impl ScrollState {
     /// Update smooth scrolling animation
     pub fn update_smooth_scroll(&mut self, delta_time: f32) {
         let diff = self.target_scroll_y - self.scroll_y;
-        if diff.abs() > 0.1 {
-            let lerp_factor = (delta_time * 10.0).min(1.0);
-            self.scroll_y += diff * lerp_factor;
-        } else {
-            self.scroll_y = self.target_scroll_y;
+        match diff.abs() {
+            x if x > 0.1 => {
+                let lerp_factor = (delta_time * 10.0).min(1.0);
+                self.scroll_y += diff * lerp_factor;
+            }
+            _ => {
+                self.scroll_y = self.target_scroll_y;
+            }
         }
     }
 

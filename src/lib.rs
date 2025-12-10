@@ -261,15 +261,21 @@ mod tests {
         assert_eq!(result.unwrap(), "README.md");
 
         // Restore original files or clean up
-        if let Some(content) = readme_backup {
-            std::fs::write("README.md", content).ok();
-        } else {
-            std::fs::remove_file("README.md").ok();
+        match readme_backup {
+            Some(content) => {
+                std::fs::write("README.md", content).ok();
+            }
+            None => {
+                std::fs::remove_file("README.md").ok();
+            }
         }
-        if let Some(content) = todo_backup {
-            std::fs::write("TODO.md", content).ok();
-        } else {
-            std::fs::remove_file("TODO.md").ok();
+        match todo_backup {
+            Some(content) => {
+                std::fs::write("TODO.md", content).ok();
+            }
+            None => {
+                std::fs::remove_file("TODO.md").ok();
+            }
         }
     }
 
@@ -296,10 +302,13 @@ mod tests {
         if let Some(content) = readme_backup {
             std::fs::write("README.md", content).ok();
         }
-        if let Some(content) = todo_backup {
-            std::fs::write("TODO.md", content).ok();
-        } else {
-            std::fs::remove_file("TODO.md").ok();
+        match todo_backup {
+            Some(content) => {
+                std::fs::write("TODO.md", content).ok();
+            }
+            None => {
+                std::fs::remove_file("TODO.md").ok();
+            }
         }
     }
 
@@ -412,10 +421,9 @@ mod tests {
 
         for node in root.descendants() {
             if let NodeValue::TableRow(is_header) = node.data.borrow().value {
-                if is_header {
-                    has_header = true;
-                } else {
-                    has_body = true;
+                match is_header {
+                    true => has_header = true,
+                    false => has_body = true,
                 }
             }
         }

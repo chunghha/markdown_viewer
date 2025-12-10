@@ -28,13 +28,15 @@ pub struct SearchState {
 impl SearchState {
     /// Create a new search state with the given query and text
     pub fn new(query: String, text: &str) -> Self {
-        let matches = if query.is_empty() {
-            Vec::new()
-        } else {
-            find_matches(&query, text)
+        let matches = match query.as_str() {
+            "" => Vec::new(),
+            _ => find_matches(&query, text),
         };
 
-        let current_index = if matches.is_empty() { None } else { Some(0) };
+        let current_index = match matches.as_slice() {
+            [] => None,
+            _ => Some(0),
+        };
 
         Self {
             query,

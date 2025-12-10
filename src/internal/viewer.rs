@@ -228,14 +228,11 @@ impl MarkdownViewer {
                 in_fenced_code = !in_fenced_code;
             }
 
-            let weight = if in_fenced_code {
-                1.25 // code_line_weight
-            } else if line.starts_with('#') {
-                1.6 // heading_weight
-            } else if line.starts_with('>') {
-                1.15 // blockquote_weight
-            } else {
-                1.0 // list_line_weight and normal_line_weight
+            let weight = match () {
+                _ if in_fenced_code => 1.25,        // code_line_weight
+                _ if line.starts_with('#') => 1.6,  // heading_weight
+                _ if line.starts_with('>') => 1.15, // blockquote_weight
+                _ => 1.0,                           // list_line_weight and normal_line_weight
             };
 
             y += avg_line_height * weight;
@@ -334,10 +331,9 @@ impl MarkdownViewer {
         self.current_focus_index = Some(match self.current_focus_index {
             None => 0,
             Some(idx) => {
-                if idx + 1 >= self.focusable_elements.len() {
-                    0 // Wrap around to first element
-                } else {
-                    idx + 1
+                match idx.checked_add(1) {
+                    Some(next) if next < self.focusable_elements.len() => next,
+                    _ => 0, // Wrap around to first element
                 }
             }
         });
@@ -358,10 +354,9 @@ impl MarkdownViewer {
         self.current_focus_index = Some(match self.current_focus_index {
             None => self.focusable_elements.len() - 1,
             Some(idx) => {
-                if idx == 0 {
-                    self.focusable_elements.len() - 1 // Wrap around to last element
-                } else {
-                    idx - 1
+                match idx {
+                    0 => self.focusable_elements.len() - 1, // Wrap around to last element
+                    _ => idx - 1,
                 }
             }
         });
@@ -481,10 +476,9 @@ impl MarkdownViewer {
         let mut in_fenced_code = false;
 
         // Estimate wrapping for text lines
-        let effective_width = if self.show_toc {
-            self.viewport_width - crate::internal::style::TOC_WIDTH - 64.0
-        } else {
-            self.viewport_width - 64.0
+        let effective_width = match self.show_toc {
+            true => self.viewport_width - crate::internal::style::TOC_WIDTH - 64.0,
+            false => self.viewport_width - 64.0,
         };
         let char_width = self.config.theme.base_text_size * 0.35;
         let chars_per_line = (effective_width / char_width).max(20.0);
@@ -531,11 +525,15 @@ impl MarkdownViewer {
                             // Track this image path
                             found_image_paths.insert(resolved_path.clone());
 
-                            if let Some(&height) = self.image_display_heights.get(&resolved_path) {
-                                image_height_on_line += height + IMAGE_VERTICAL_PADDING;
-                            } else {
-                                // Use PLACEHOLDER_HEIGHT for unloaded images
-                                image_height_on_line += PLACEHOLDER_HEIGHT + IMAGE_VERTICAL_PADDING;
+                            match self.image_display_heights.get(&resolved_path) {
+                                Some(&height) => {
+                                    image_height_on_line += height + IMAGE_VERTICAL_PADDING;
+                                }
+                                None => {
+                                    // Use PLACEHOLDER_HEIGHT for unloaded images
+                                    image_height_on_line +=
+                                        PLACEHOLDER_HEIGHT + IMAGE_VERTICAL_PADDING;
+                                }
                             }
                             found_image = true;
                         }
@@ -551,33 +549,34 @@ impl MarkdownViewer {
                 smart_text_height += image_height_on_line;
             }
 
-            let weight = if line.starts_with('#') {
-                heading_weight
-            } else if line.starts_with('>') {
-                blockquote_weight
-            } else if line.starts_with('|') {
-                let col_count = line.chars().filter(|c| *c == '|').count().max(2) - 1;
-                // Reduced from 0.5 to 0.15: 10 cols = 2.5x instead of 6.0x
-                1.0 + (col_count as f32 * 0.15)
-            } else if line.starts_with('-')
-                || line.starts_with('*')
-                || line.starts_with('+')
-                || (line.chars().next().is_some_and(|c| c.is_ascii_digit()) && line.contains(". "))
-            {
-                list_line_weight
-            } else if line_text.trim().is_empty() {
-                if found_image { 0.0 } else { empty_line_weight }
-            } else {
-                normal_line_weight
+            let weight = match () {
+                _ if line.starts_with('#') => heading_weight,
+                _ if line.starts_with('>') => blockquote_weight,
+                _ if line.starts_with('|') => {
+                    let col_count = line.chars().filter(|c| *c == '|').count().max(2) - 1;
+                    // Reduced from 0.5 to 0.15: 10 cols = 2.5x instead of 6.0x
+                    1.0 + (col_count as f32 * 0.15)
+                }
+                _ if line.starts_with('-')
+                    || line.starts_with('*')
+                    || line.starts_with('+')
+                    || (line.chars().next().is_some_and(|c| c.is_ascii_digit())
+                        && line.contains(". ")) =>
+                {
+                    list_line_weight
+                }
+                _ if line_text.trim().is_empty() => match found_image {
+                    true => 0.0,
+                    false => empty_line_weight,
+                },
+                _ => normal_line_weight,
             };
 
             let trimmed_len = line_text.trim().len();
-            let visual_lines = if trimmed_len > 0 {
-                (trimmed_len as f32 / chars_per_line).ceil()
-            } else if found_image {
-                0.0
-            } else {
-                1.0
+            let visual_lines = match (trimmed_len, found_image) {
+                (n, _) if n > 0 => (n as f32 / chars_per_line).ceil(),
+                (0, true) => 0.0,
+                _ => 1.0,
             };
 
             smart_text_height += visual_lines * avg_line_height * weight;
@@ -621,20 +620,19 @@ impl MarkdownViewer {
                 continue;
             }
 
-            let weight = if line.starts_with('#') {
-                legacy_heading_weight
-            } else if line.starts_with('>') {
-                legacy_quote_weight
-            } else if line.starts_with('-')
-                || line.starts_with('*')
-                || line.starts_with('+')
-                || (line.chars().next().is_some_and(|c| c.is_ascii_digit()) && line.contains(". "))
-            {
-                legacy_list_weight
-            } else if line.is_empty() {
-                legacy_empty_weight
-            } else {
-                legacy_normal_weight
+            let weight = match () {
+                _ if line.starts_with('#') => legacy_heading_weight,
+                _ if line.starts_with('>') => legacy_quote_weight,
+                _ if line.starts_with('-')
+                    || line.starts_with('*')
+                    || line.starts_with('+')
+                    || (line.chars().next().is_some_and(|c| c.is_ascii_digit())
+                        && line.contains(". ")) =>
+                {
+                    legacy_list_weight
+                }
+                _ if line.is_empty() => legacy_empty_weight,
+                _ => legacy_normal_weight,
             };
 
             legacy_text_height += avg_line_height * weight;
@@ -728,16 +726,14 @@ impl MarkdownViewer {
                             let orig_w = rgba.width() as f32;
                             let orig_h = rgba.height() as f32;
                             // Compute displayed width constrained by IMAGE_MAX_WIDTH (same as rendering).
-                            let displayed_w = if orig_w > IMAGE_MAX_WIDTH {
-                                IMAGE_MAX_WIDTH
-                            } else {
-                                orig_w
+                            let displayed_w = match orig_w > IMAGE_MAX_WIDTH {
+                                true => IMAGE_MAX_WIDTH,
+                                false => orig_w,
                             };
                             // Maintain aspect ratio for displayed height
-                            let displayed_h = if orig_w > 0.0 {
-                                (displayed_w / orig_w) * orig_h
-                            } else {
-                                orig_h
+                            let displayed_h = match orig_w {
+                                w if w > 0.0 => (displayed_w / w) * orig_h,
+                                _ => orig_h,
                             };
 
                             let frame = image::Frame::new(rgba);
@@ -818,42 +814,46 @@ impl Render for MarkdownViewer {
                     let saved_scroll_y = self.scroll_state.scroll_y;
 
                     // Reload file content
-                    if let Some(path_str) = self.markdown_file_path.to_str() {
-                        match load_markdown_content(path_str) {
-                            Ok(new_content) => {
-                                self.markdown_content = new_content;
+                    match self.markdown_file_path.to_str() {
+                        Some(path_str) => {
+                            match load_markdown_content(path_str) {
+                                Ok(new_content) => {
+                                    self.markdown_content = new_content;
 
-                                // Regenerate TOC
-                                let arena = comrak::Arena::new();
-                                let mut options = comrak::Options::default();
-                                options.extension.table = true;
-                                let root = comrak::parse_document(
-                                    &arena,
-                                    &self.markdown_content,
-                                    &options,
-                                );
-                                self.toc = crate::internal::toc::TableOfContents::from_ast(root);
+                                    // Regenerate TOC
+                                    let arena = comrak::Arena::new();
+                                    let mut options = comrak::Options::default();
+                                    options.extension.table = true;
+                                    let root = comrak::parse_document(
+                                        &arena,
+                                        &self.markdown_content,
+                                        &options,
+                                    );
+                                    self.toc =
+                                        crate::internal::toc::TableOfContents::from_ast(root);
 
-                                // Clear image cache as images may have changed
-                                self.image_cache.clear();
-                                self.image_display_heights.clear();
-                                // Restore scroll position
-                                self.scroll_state.scroll_y = saved_scroll_y;
-                                self.recompute_max_scroll();
-                                self.compute_toc_max_scroll();
-                                // Clear file deleted flag if it was set
-                                self.file_deleted = false;
-                                info!("File reloaded successfully");
-                            }
-                            Err(e) => {
-                                warn!("Failed to reload file: {}", e);
+                                    // Clear image cache as images may have changed
+                                    self.image_cache.clear();
+                                    self.image_display_heights.clear();
+                                    // Restore scroll position
+                                    self.scroll_state.scroll_y = saved_scroll_y;
+                                    self.recompute_max_scroll();
+                                    self.compute_toc_max_scroll();
+                                    // Clear file deleted flag if it was set
+                                    self.file_deleted = false;
+                                    info!("File reloaded successfully");
+                                }
+                                Err(e) => {
+                                    warn!("Failed to reload file: {}", e);
+                                }
                             }
                         }
-                    } else {
-                        warn!(
-                            "Failed to convert path to string: {:?}",
-                            self.markdown_file_path
-                        );
+                        None => {
+                            warn!(
+                                "Failed to convert path to string: {:?}",
+                                self.markdown_file_path
+                            );
+                        }
                     }
                     cx.notify();
                 }
@@ -915,16 +915,18 @@ impl Render for MarkdownViewer {
             // Search action handlers
             .on_action(cx.listener(|this, _: &ToggleSearch, _, cx| {
                 debug!("ToggleSearch action triggered");
-                if this.search_state.is_some() {
-                    // Exit search mode
-                    debug!("Exiting search mode");
-                    this.search_state = None;
-                    this.search_input.clear();
-                } else {
-                    // Enter search mode
-                    debug!("Entering search mode");
-                    this.search_state =
-                        Some(SearchState::new(String::new(), &this.markdown_content));
+                match this.search_state.take() {
+                    Some(_) => {
+                        // Exit search mode
+                        debug!("Exiting search mode");
+                        this.search_input.clear();
+                    }
+                    None => {
+                        // Enter search mode
+                        debug!("Entering search mode");
+                        this.search_state =
+                            Some(SearchState::new(String::new(), &this.markdown_content));
+                    }
                 }
                 cx.notify();
             }))
@@ -960,10 +962,9 @@ impl Render for MarkdownViewer {
                         .flex_col()
                         .w_full()
                         .pt_4()
-                        .pr(if self.show_toc {
-                            px(crate::internal::style::TOC_WIDTH + 32.0)
-                        } else {
-                            px(32.0)
+                        .pr(match self.show_toc {
+                            true => px(crate::internal::style::TOC_WIDTH + 32.0),
+                            false => px(32.0),
                         })
                         .pb_4()
                         .pl_8()
@@ -973,23 +974,22 @@ impl Render for MarkdownViewer {
                             root,
                             Some(&self.markdown_file_path),
                             self.search_state.as_ref(),
-                            if self.show_toc {
-                                self.viewport_width - crate::internal::style::TOC_WIDTH - 64.0
-                            } else {
-                                self.viewport_width - 64.0
+                            match self.show_toc {
+                                true => {
+                                    self.viewport_width - crate::internal::style::TOC_WIDTH - 64.0
+                                }
+                                false => self.viewport_width - 64.0,
                             },
                             &theme_colors,
                             self.config.theme.theme,
                             cx,
-                            &mut |path| {
-                                if let Some(ImageState::Loaded(src)) = self.image_cache.get(path) {
-                                    Some(src.clone())
-                                } else {
-                                    if !self.image_cache.contains_key(path) {
-                                        missing_images.insert(path.to_string());
-                                    }
+                            &mut |path| match self.image_cache.get(path) {
+                                Some(ImageState::Loaded(src)) => Some(src.clone()),
+                                None => {
+                                    missing_images.insert(path.to_string());
                                     None
                                 }
+                                _ => None,
                             },
                             self.current_focus_index
                                 .and_then(|idx| self.focusable_elements.get(idx)),
@@ -1000,68 +1000,57 @@ impl Render for MarkdownViewer {
             .child(ui::render_version_badge());
 
         // Add search indicator overlay if search is active
-        let element = if let Some(overlay) = ui::render_search_overlay(self) {
-            element.child(overlay)
-        } else {
-            element
+        let element = match ui::render_search_overlay(self) {
+            Some(overlay) => element.child(overlay),
+            None => element,
         };
 
         // Add go-to-line overlay if active
-        let element = if let Some(overlay) = ui::render_goto_line_overlay(self) {
-            element.child(overlay)
-        } else {
-            element
+        let element = match ui::render_goto_line_overlay(self) {
+            Some(overlay) => element.child(overlay),
+            None => element,
         };
 
         // Bookmarks Overlay
-        let element = if let Some(overlay) = ui::render_bookmarks_overlay(self, &theme_colors, cx) {
-            element.child(overlay)
-        } else {
-            element
+        let element = match ui::render_bookmarks_overlay(self, &theme_colors, cx) {
+            Some(overlay) => element.child(overlay),
+            None => element,
         };
 
         // Help Overlay
-        let element = if let Some(overlay) = ui::render_help_overlay(self, &theme_colors) {
-            element.child(overlay)
-        } else {
-            element
+        let element = match ui::render_help_overlay(self, &theme_colors) {
+            Some(overlay) => element.child(overlay),
+            None => element,
         };
 
         // File Deleted Overlay
-        let element = if let Some(overlay) = ui::render_file_deleted_overlay(self) {
-            element.child(overlay)
-        } else {
-            element
+        let element = match ui::render_file_deleted_overlay(self) {
+            Some(overlay) => element.child(overlay),
+            None => element,
         };
 
         // PDF Export Notification Overlay
-        let element = if let Some(overlay) = ui::render_pdf_export_overlay(self, &theme_colors) {
-            element.child(overlay)
-        } else {
-            element
+        let element = match ui::render_pdf_export_overlay(self, &theme_colors) {
+            Some(overlay) => element.child(overlay),
+            None => element,
         };
 
         // Search History Notification Overlay
-        let element = if let Some(overlay) =
-            ui::render_search_history_notification(self, &theme_colors, cx)
-        {
-            element.child(overlay)
-        } else {
-            element
+        let element = match ui::render_search_history_notification(self, &theme_colors, cx) {
+            Some(overlay) => element.child(overlay),
+            None => element,
         };
 
         // PDF Overwrite Confirmation Overlay
-        let element = if let Some(overlay) = ui::render_pdf_overwrite_confirm(self, &theme_colors) {
-            element.child(overlay)
-        } else {
-            element
+        let element = match ui::render_pdf_overwrite_confirm(self, &theme_colors) {
+            Some(overlay) => element.child(overlay),
+            None => element,
         };
 
         // TOC Sidebar
-        let element = if let Some(sidebar) = ui::render_toc_sidebar(self, &theme_colors, cx) {
-            element.child(sidebar)
-        } else {
-            element
+        let element = match ui::render_toc_sidebar(self, &theme_colors, cx) {
+            Some(sidebar) => element.child(sidebar),
+            None => element,
         };
 
         // TOC Toggle Button
@@ -1079,19 +1068,22 @@ impl Render for MarkdownViewer {
             let pdf_path = self.markdown_file_path.with_extension("pdf");
 
             // Check if file already exists
-            if pdf_path.exists() {
-                // Show confirmation prompt
-                debug!(
-                    "PDF file already exists, prompting for confirmation: {:?}",
-                    pdf_path
-                );
-                self.show_pdf_overwrite_confirm = true;
-                self.pdf_overwrite_path = Some(pdf_path);
-                cx.notify();
-            } else {
-                // File doesn't exist, export directly
-                self.perform_pdf_export(&pdf_path);
-                cx.notify();
+            match pdf_path.exists() {
+                true => {
+                    // Show confirmation prompt
+                    debug!(
+                        "PDF file already exists, prompting for confirmation: {:?}",
+                        pdf_path
+                    );
+                    self.show_pdf_overwrite_confirm = true;
+                    self.pdf_overwrite_path = Some(pdf_path);
+                    cx.notify();
+                }
+                false => {
+                    // File doesn't exist, export directly
+                    self.perform_pdf_export(&pdf_path);
+                    cx.notify();
+                }
             }
         }
 

@@ -55,10 +55,9 @@ pub fn rasterize_svg_to_dynamic_image(
     }
 
     // Compute scale constrained by crate::IMAGE_MAX_WIDTH while preserving aspect ratio
-    let scale = if svg_w > crate::IMAGE_MAX_WIDTH {
-        crate::IMAGE_MAX_WIDTH / svg_w
-    } else {
-        1.0
+    let scale = match svg_w.partial_cmp(&crate::IMAGE_MAX_WIDTH) {
+        Some(std::cmp::Ordering::Greater) => crate::IMAGE_MAX_WIDTH / svg_w,
+        _ => 1.0,
     };
 
     let target_w = (svg_w * scale).ceil() as u32;
@@ -108,46 +107,51 @@ pub fn rasterize_svg_to_dynamic_image(
     // Decide mapping of buffer indices -> (R,G,B) source positions.
     // Default to BGRA mapping (R is at index 2) when ambiguous.
     // tiny-skia typically outputs BGRA on most platforms.
-    let mapping = if non_transparent_count == 0 {
-        [2usize, 1usize, 0usize]
-    } else {
-        let s0 = sum_c[0] as f64 / non_transparent_count as f64;
-        let s1 = sum_c[1] as f64 / non_transparent_count as f64;
-        let s2 = sum_c[2] as f64 / non_transparent_count as f64;
-        // For an orange image (#FFA500 = RGB 255,165,0):
-        // - In BGRA format: bytes are [B=0, G=165, R=255, A=255], so index 2 is high
-        // - In RGBA format: bytes are [R=255, G=165, B=0, A=255], so index 0 is high
-        // Therefore: high index 2 -> BGRA, high index 0 -> RGBA
-        if s2 > s0 * 1.05 && s2 > s1 * 1.05 {
-            [2usize, 1usize, 0usize]
-        } else if s0 > s2 * 1.05 && s0 > s1 * 1.05 {
-            [0usize, 1usize, 2usize]
-        } else {
-            [2usize, 1usize, 0usize]
+    let mapping = match non_transparent_count {
+        0 => [2usize, 1usize, 0usize],
+        _ => {
+            let s0 = sum_c[0] as f64 / non_transparent_count as f64;
+            let s1 = sum_c[1] as f64 / non_transparent_count as f64;
+            let s2 = sum_c[2] as f64 / non_transparent_count as f64;
+            // For an orange image (#FFA500 = RGB 255,165,0):
+            // - In BGRA format: bytes are [B=0, G=165, R=255, A=255], so index 2 is high
+            // - In RGBA format: bytes are [R=255, G=165, B=0, A=255], so index 0 is high
+            // Therefore: high index 2 -> BGRA, high index 0 -> RGBA
+            match (
+                s2 > s0 * 1.05 && s2 > s1 * 1.05,
+                s0 > s2 * 1.05 && s0 > s1 * 1.05,
+            ) {
+                (true, false) => [2usize, 1usize, 0usize],
+                (false, true) => [0usize, 1usize, 2usize],
+                _ => [2usize, 1usize, 0usize],
+            }
         }
     };
     for px in buf.chunks_exact_mut(4) {
         let a = px[3] as f32 / 255.0;
-        if a > 0.0 {
-            // Read premultiplied channels from the mapped source indices
-            let s_r = px[mapping[0]] as f32;
-            let s_g = px[mapping[1]] as f32;
-            let s_b = px[mapping[2]] as f32;
-            // Un-premultiply and clamp
-            let ur = (s_r / a).min(255.0) as u8;
-            let ug = (s_g / a).min(255.0) as u8;
-            let ub = (s_b / a).min(255.0) as u8;
-            // Write out in RGBA order expected by image::RgbaImage
-            px[0] = ur;
-            px[1] = ug;
-            px[2] = ub;
-            // Preserve/restore alpha
-            // Leave px[3] as-is (already the alpha byte)
-        } else {
-            // Fully transparent: clear color channels (alpha stays 0)
-            px[0] = 0;
-            px[1] = 0;
-            px[2] = 0;
+        match a > 0.0 {
+            true => {
+                // Read premultiplied channels from the mapped source indices
+                let s_r = px[mapping[0]] as f32;
+                let s_g = px[mapping[1]] as f32;
+                let s_b = px[mapping[2]] as f32;
+                // Un-premultiply and clamp
+                let ur = (s_r / a).min(255.0) as u8;
+                let ug = (s_g / a).min(255.0) as u8;
+                let ub = (s_b / a).min(255.0) as u8;
+                // Write out in RGBA order expected by image::RgbaImage
+                px[0] = ur;
+                px[1] = ug;
+                px[2] = ub;
+                // Preserve/restore alpha
+                // Leave px[3] as-is (already the alpha byte)
+            }
+            false => {
+                // Fully transparent: clear color channels (alpha stays 0)
+                px[0] = 0;
+                px[1] = 0;
+                px[2] = 0;
+            }
         }
     }
 

@@ -65,16 +65,23 @@ pub fn resolve_markdown_file_path(
             let readme_path = "README.md";
             let todo_path = "TODO.md";
 
-            if Path::new(readme_path).exists() {
-                info!("Using default file: {}", readme_path);
-                Ok(readme_path.to_string())
-            } else if Path::new(todo_path).exists() {
-                info!("Using fallback file: {}", todo_path);
-                Ok(todo_path.to_string())
-            } else {
-                anyhow::bail!(
-                    "Default files README.md and TODO.md not found. Please specify a markdown file."
-                );
+            match (
+                Path::new(readme_path).exists(),
+                Path::new(todo_path).exists(),
+            ) {
+                (true, _) => {
+                    info!("Using default file: {}", readme_path);
+                    Ok(readme_path.to_string())
+                }
+                (false, true) => {
+                    info!("Using fallback file: {}", todo_path);
+                    Ok(todo_path.to_string())
+                }
+                _ => {
+                    anyhow::bail!(
+                        "Default files README.md and TODO.md not found. Please specify a markdown file."
+                    );
+                }
             }
         }
     }
@@ -128,22 +135,25 @@ pub fn resolve_image_path(image_path: &str, markdown_file_path: &Path) -> String
     }
 
     // Resolve relative path
-    if let Some(parent) = markdown_file_path.parent() {
-        let resolved = parent.join(image_path);
-        // Normalize the path to remove . and .. components
-        let normalized = normalize_path(&resolved);
-        let resolved_str = normalized.to_string_lossy().to_string();
-        debug!(
-            "Resolved relative image path '{}' to '{}'",
-            image_path, resolved_str
-        );
-        resolved_str
-    } else {
-        debug!(
-            "Could not resolve parent directory for '{}', using as-is",
-            image_path
-        );
-        image_path.to_string()
+    match markdown_file_path.parent() {
+        Some(parent) => {
+            let resolved = parent.join(image_path);
+            // Normalize the path to remove . and .. components
+            let normalized = normalize_path(&resolved);
+            let resolved_str = normalized.to_string_lossy().to_string();
+            debug!(
+                "Resolved relative image path '{}' to '{}'",
+                image_path, resolved_str
+            );
+            resolved_str
+        }
+        None => {
+            debug!(
+                "Could not resolve parent directory for '{}', using as-is",
+                image_path
+            );
+            image_path.to_string()
+        }
     }
 }
 

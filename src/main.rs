@@ -62,27 +62,30 @@ fn main() -> Result<()> {
     );
 
     // Start file watcher if enabled
-    let (file_watcher_rx, file_watcher) = if config.file_watcher.enabled {
-        // Convert to absolute path for file watcher
-        let abs_file_path = std::fs::canonicalize(&file_path)
-            .unwrap_or_else(|_| std::path::PathBuf::from(&file_path));
+    let (file_watcher_rx, file_watcher) = match config.file_watcher.enabled {
+        true => {
+            // Convert to absolute path for file watcher
+            let abs_file_path = std::fs::canonicalize(&file_path)
+                .unwrap_or_else(|_| std::path::PathBuf::from(&file_path));
 
-        match start_watching(&abs_file_path, config.file_watcher.debounce_ms) {
-            Ok((rx, debouncer)) => {
-                info!("File watcher started for: {}", file_path);
-                (Some(rx), Some(debouncer))
-            }
-            Err(e) => {
-                warn!(
-                    "Failed to start file watcher for '{}': {:?}. Continuing without auto-reload.",
-                    file_path, e
-                );
-                (None, None)
+            match start_watching(&abs_file_path, config.file_watcher.debounce_ms) {
+                Ok((rx, debouncer)) => {
+                    info!("File watcher started for: {}", file_path);
+                    (Some(rx), Some(debouncer))
+                }
+                Err(e) => {
+                    warn!(
+                        "Failed to start file watcher for '{}': {:?}. Continuing without auto-reload.",
+                        file_path, e
+                    );
+                    (None, None)
+                }
             }
         }
-    } else {
-        info!("File watcher disabled in configuration");
-        (None, None)
+        false => {
+            info!("File watcher disabled in configuration");
+            (None, None)
+        }
     };
 
     // Run the GUI on the main thread (required by gpui). Background async work will use `bg_rt`.

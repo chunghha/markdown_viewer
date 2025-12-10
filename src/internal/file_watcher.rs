@@ -96,13 +96,12 @@ pub fn start_watching(
     .context("Failed to create file watcher debouncer")?;
 
     // Watch the file's parent directory (watching individual files isn't supported on all platforms)
-    let watch_path = if file_path.is_file() {
-        file_path
+    let watch_path = match file_path.is_file() {
+        true => file_path
             .parent()
             .context("File has no parent directory")?
-            .to_path_buf()
-    } else {
-        file_path.clone()
+            .to_path_buf(),
+        false => file_path.clone(),
     };
 
     // Call watch directly on debouncer (watcher() is deprecated)

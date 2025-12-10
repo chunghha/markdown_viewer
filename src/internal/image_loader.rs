@@ -76,27 +76,39 @@ pub async fn fetch_bytes_with_optional_png_fallback(url: &str) -> Result<Vec<u8>
 ///    and try decoding that response as a raster image.
 /// 5) If `path` is a local filesystem path, use `image::open`.
 pub async fn fetch_and_decode_image(path: &str) -> Result<image::DynamicImage, anyhow::Error> {
-    if path.starts_with("http://") || path.starts_with("https://") {
-        info!("Starting remote image download: {}", path);
+    match path {
+        p if p.starts_with("http://") || p.starts_with("https://") => {
+            info!("Starting remote image download: {}", p);
 
-        // Primary fetch
-        let primary_bytes = fetch_bytes_with_optional_png_fallback(path).await?;
+            // Primary fetch
+            let primary_bytes = fetch_bytes_with_optional_png_fallback(p).await?;
 
-        // Try decode as raster
-        match image::load_from_memory(&primary_bytes) {
-            Ok(img) => Ok(img),
-            Err(_orig) => {
-                // Determine if it looks like SVG by content or filename
-                let looks_like_svg =
-                    primary_bytes.starts_with(b"<") || path.to_lowercase().ends_with(".svg");
-                if looks_like_svg {
-                    match crate::rasterize_svg_to_dynamic_image(&primary_bytes) {
-                        Ok(img) => Ok(img),
-                        Err(e) => {
-                            debug!("SVG rasterization failed for {}: {}", path, e);
-                            // fallthrough to PNG fallback attempt
-                            let png_url = png_fallback_url(path);
-                            info!("Attempting PNG fallback for {}: {}", path, png_url);
+            // Try decode as raster
+            match image::load_from_memory(&primary_bytes) {
+                Ok(img) => Ok(img),
+                Err(_orig) => {
+                    // Determine if it looks like SVG by content or filename
+                    let looks_like_svg =
+                        primary_bytes.starts_with(b"<") || p.to_lowercase().ends_with(".svg");
+                    match looks_like_svg {
+                        true => match crate::rasterize_svg_to_dynamic_image(&primary_bytes) {
+                            Ok(img) => Ok(img),
+                            Err(e) => {
+                                debug!("SVG rasterization failed for {}: {}", p, e);
+                                // fallthrough to PNG fallback attempt
+                                let png_url = png_fallback_url(p);
+                                info!("Attempting PNG fallback for {}: {}", p, png_url);
+                                let fallback_bytes =
+                                    fetch_bytes_with_optional_png_fallback(&png_url).await?;
+                                let img2 = image::load_from_memory(&fallback_bytes)
+                                    .map_err(anyhow::Error::new)?;
+                                Ok(img2)
+                            }
+                        },
+                        false => {
+                            // Not SVG and raster decode failed: try PNG fallback
+                            let png_url = png_fallback_url(p);
+                            info!("Attempting PNG fallback for {}: {}", p, png_url);
                             let fallback_bytes =
                                 fetch_bytes_with_optional_png_fallback(&png_url).await?;
                             let img2 = image::load_from_memory(&fallback_bytes)
@@ -104,22 +116,15 @@ pub async fn fetch_and_decode_image(path: &str) -> Result<image::DynamicImage, a
                             Ok(img2)
                         }
                     }
-                } else {
-                    // Not SVG and raster decode failed: try PNG fallback
-                    let png_url = png_fallback_url(path);
-                    info!("Attempting PNG fallback for {}: {}", path, png_url);
-                    let fallback_bytes = fetch_bytes_with_optional_png_fallback(&png_url).await?;
-                    let img2 =
-                        image::load_from_memory(&fallback_bytes).map_err(anyhow::Error::new)?;
-                    Ok(img2)
                 }
             }
         }
-    } else {
-        // Local file
-        info!("Loading local image: {}", path);
-        let img = image::open(path)?;
-        Ok(img)
+        _ => {
+            // Local file
+            info!("Loading local image: {}", path);
+            let img = image::open(path)?;
+            Ok(img)
+        }
     }
 }
 
@@ -133,10 +138,9 @@ pub async fn fetch_and_decode_image(path: &str) -> Result<image::DynamicImage, a
 ///
 /// This mirrors the fallback strategy used by various placeholder services.
 pub fn png_fallback_url(original: &str) -> String {
-    if original.contains('?') {
-        original.replacen('?', ".png?", 1)
-    } else {
-        format!("{}.png", original)
+    match original.find('?') {
+        Some(_) => original.replacen('?', ".png?", 1),
+        None => format!("{}.png", original),
     }
 }
 

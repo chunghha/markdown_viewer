@@ -22,84 +22,80 @@ pub fn render_version_badge() -> impl IntoElement {
 }
 
 pub fn render_search_overlay(viewer: &MarkdownViewer) -> Option<impl IntoElement> {
-    if let Some(search_state) = &viewer.search_state {
-        let match_info = if search_state.match_count() > 0 {
-            format!(
-                "Search: \"{}\" ({} of {} matches)",
-                viewer.search_input,
-                search_state.current_match_number().unwrap_or(0),
-                search_state.match_count()
-            )
-        } else if viewer.search_input.is_empty() {
-            "Search: (type to search)".to_string()
-        } else {
-            format!("Search: \"{}\" (no matches)", viewer.search_input)
-        };
+    match &viewer.search_state {
+        Some(search_state) => {
+            let match_info = match (search_state.match_count(), viewer.search_input.is_empty()) {
+                (n, _) if n > 0 => format!(
+                    "Search: \"{}\" ({} of {} matches)",
+                    viewer.search_input,
+                    search_state.current_match_number().unwrap_or(0),
+                    search_state.match_count()
+                ),
+                (0, true) => "Search: (type to search)".to_string(),
+                (0, false) => format!("Search: \"{}\" (no matches)", viewer.search_input),
+                // Fallback arm, though all cases are covered above
+                _ => "Search: (type to search)".to_string(),
+            };
 
-        Some(
-            div()
-                .absolute()
-                .top_0()
-                .left_0()
-                .right_0()
-                .bg(Rgba {
-                    r: 1.0,
-                    g: 0.95,
-                    b: 0.6,
-                    a: 0.95,
-                })
-                .text_color(Rgba {
-                    r: 0.0,
-                    g: 0.0,
-                    b: 0.0,
-                    a: 1.0,
-                })
-                .px_4()
-                .py_2()
-                .text_size(px(14.0))
-                .child(match_info),
-        )
-    } else {
-        None
+            Some(
+                div()
+                    .absolute()
+                    .top_0()
+                    .left_0()
+                    .right_0()
+                    .bg(Rgba {
+                        r: 1.0,
+                        g: 0.95,
+                        b: 0.6,
+                        a: 0.95,
+                    })
+                    .text_color(Rgba {
+                        r: 0.0,
+                        g: 0.0,
+                        b: 0.0,
+                        a: 1.0,
+                    })
+                    .px_4()
+                    .py_2()
+                    .text_size(px(14.0))
+                    .child(match_info),
+            )
+        }
+        None => None,
     }
 }
 
 pub fn render_goto_line_overlay(viewer: &MarkdownViewer) -> Option<impl IntoElement> {
-    if viewer.show_goto_line {
-        let total_lines = viewer.markdown_content.lines().count();
-        let display_text = if viewer.goto_line_input.is_empty() {
-            format!("Go to line: (1-{})", total_lines)
-        } else {
-            // Validate the input
-            if let Some(line_number) = MarkdownViewer::parse_line_number(&viewer.goto_line_input) {
-                if line_number > total_lines {
-                    format!(
+    match viewer.show_goto_line {
+        true => {
+            let total_lines = viewer.markdown_content.lines().count();
+            let display_text = match viewer.goto_line_input.as_str() {
+                "" => format!("Go to line: (1-{})", total_lines),
+                input => match MarkdownViewer::parse_line_number(input) {
+                    Some(line_number) if line_number > total_lines => format!(
                         "Go to line: \"{}\" (exceeds max: {})",
                         viewer.goto_line_input, total_lines
-                    )
-                } else {
-                    format!("Go to line: \"{}\"", viewer.goto_line_input)
-                }
-            } else {
-                format!("Go to line: \"{}\" (invalid)", viewer.goto_line_input)
-            }
-        };
+                    ),
+                    Some(_) => format!("Go to line: \"{}\"", viewer.goto_line_input),
+                    None => format!("Go to line: \"{}\" (invalid)", viewer.goto_line_input),
+                },
+            };
 
-        Some(
-            div()
-                .absolute()
-                .top_0()
-                .left_0()
-                .right_0()
-                .bg(GOTO_LINE_OVERLAY_BG_COLOR)
-                .text_color(GOTO_LINE_OVERLAY_TEXT_COLOR)
-                .px_4()
-                .py_2()
-                .text_size(px(14.0))
-                .child(display_text),
-        )
-    } else {
-        None
+            Some(
+                div()
+                    .absolute()
+                    .top_0()
+                    .left_0()
+                    .right_0()
+                    .bg(GOTO_LINE_OVERLAY_BG_COLOR)
+                    .text_color(GOTO_LINE_OVERLAY_TEXT_COLOR)
+                    .px_4()
+                    .py_2()
+                    .text_size(px(14.0))
+                    .child(display_text),
+            )
+        }
+        false => None,
     }
 }
 
@@ -107,8 +103,8 @@ pub fn render_help_overlay(
     viewer: &MarkdownViewer,
     theme_colors: &crate::internal::theme::ThemeColors,
 ) -> Option<impl IntoElement> {
-    if viewer.show_help {
-        Some(
+    match viewer.show_help {
+        true => Some(
             div()
                 .absolute()
                 .top_0()
@@ -125,15 +121,14 @@ pub fn render_help_overlay(
                 .items_center()
                 .justify_center()
                 .child(help_panel(theme_colors)),
-        )
-    } else {
-        None
+        ),
+        false => None,
     }
 }
 
 pub fn render_file_deleted_overlay(viewer: &MarkdownViewer) -> Option<impl IntoElement> {
-    if viewer.file_deleted {
-        Some(
+    match viewer.file_deleted {
+        true => Some(
             div()
                 .absolute()
                 .top_0()
@@ -156,9 +151,8 @@ pub fn render_file_deleted_overlay(viewer: &MarkdownViewer) -> Option<impl IntoE
                 .text_size(px(14.0))
                 .font_weight(FontWeight::BOLD)
                 .child("⚠ File deleted - monitoring for recreation"),
-        )
-    } else {
-        None
+        ),
+        false => None,
     }
 }
 
@@ -166,29 +160,29 @@ pub fn render_pdf_export_overlay(
     viewer: &MarkdownViewer,
     theme_colors: &crate::internal::theme::ThemeColors,
 ) -> Option<impl IntoElement> {
-    if let Some(message) = &viewer.pdf_export_message {
-        let (bg_color, icon) = if viewer.pdf_export_success {
-            (theme_colors.pdf_success_bg_color, "✓")
-        } else {
-            (theme_colors.pdf_error_bg_color, "✗")
-        };
+    match &viewer.pdf_export_message {
+        Some(message) => {
+            let (bg_color, icon) = match viewer.pdf_export_success {
+                true => (theme_colors.pdf_success_bg_color, "✓"),
+                false => (theme_colors.pdf_error_bg_color, "✗"),
+            };
 
-        Some(
-            div()
-                .absolute()
-                .top_0()
-                .left_0()
-                .right_0()
-                .bg(bg_color)
-                .text_color(theme_colors.pdf_notification_text_color)
-                .px_4()
-                .py_2()
-                .text_size(px(14.0))
-                .font_weight(FontWeight::BOLD)
-                .child(format!("{} {}", icon, message)),
-        )
-    } else {
-        None
+            Some(
+                div()
+                    .absolute()
+                    .top_0()
+                    .left_0()
+                    .right_0()
+                    .bg(bg_color)
+                    .text_color(theme_colors.pdf_notification_text_color)
+                    .px_4()
+                    .py_2()
+                    .text_size(px(14.0))
+                    .font_weight(FontWeight::BOLD)
+                    .child(format!("{} {}", icon, message)),
+            )
+        }
+        None => None,
     }
 }
 
@@ -196,30 +190,31 @@ pub fn render_pdf_overwrite_confirm(
     viewer: &MarkdownViewer,
     theme_colors: &crate::internal::theme::ThemeColors,
 ) -> Option<impl IntoElement> {
-    if viewer.show_pdf_overwrite_confirm {
-        let filename = viewer
-            .pdf_overwrite_path
-            .as_ref()
-            .and_then(|p| p.file_name())
-            .and_then(|n| n.to_str())
-            .unwrap_or("output.pdf");
+    match viewer.show_pdf_overwrite_confirm {
+        true => {
+            let filename = viewer
+                .pdf_overwrite_path
+                .as_ref()
+                .and_then(|p| p.file_name())
+                .and_then(|n| n.to_str())
+                .unwrap_or("output.pdf");
 
-        Some(
-            div()
-                .absolute()
-                .top_0()
-                .left_0()
-                .right_0()
-                .bg(theme_colors.pdf_warning_bg_color)
-                .text_color(theme_colors.text_color)
-                .px_4()
-                .py_2()
-                .text_size(px(14.0))
-                .font_weight(FontWeight::BOLD)
-                .child(format!("⚠ {} already exists. Overwrite? (Y/N)", filename)),
-        )
-    } else {
-        None
+            Some(
+                div()
+                    .absolute()
+                    .top_0()
+                    .left_0()
+                    .right_0()
+                    .bg(theme_colors.pdf_warning_bg_color)
+                    .text_color(theme_colors.text_color)
+                    .px_4()
+                    .py_2()
+                    .text_size(px(14.0))
+                    .font_weight(FontWeight::BOLD)
+                    .child(format!("⚠ {} already exists. Overwrite? (Y/N)", filename)),
+            )
+        }
+        false => None,
     }
 }
 
@@ -345,7 +340,10 @@ pub fn render_toc_toggle_button(
                 cx.notify();
             }),
         )
-        .child(if viewer.show_toc { "✕" } else { "☰" })
+        .child(match viewer.show_toc {
+            true => "✕",
+            false => "☰",
+        })
 }
 
 pub fn render_bookmarks_overlay(
@@ -360,18 +358,16 @@ pub fn render_bookmarks_overlay(
     use crate::internal::style::FOCUS_BG_COLOR;
     use crate::internal::viewer::FocusableElement;
 
-    let bookmarks_list = if viewer.bookmarks.is_empty() {
-        div()
+    let bookmarks_list = match viewer.bookmarks.as_slice() {
+        [] => div()
             .flex()
             .items_center()
             .justify_center()
             .py_4()
             .text_color(theme_colors.text_color)
-            .child("No bookmarks yet. Press Cmd+D to add one.")
-    } else {
-        div().flex().flex_col().gap_1().children(
-            viewer
-                .bookmarks
+            .child("No bookmarks yet. Press Cmd+D to add one."),
+        entries => div().flex().flex_col().gap_1().children(
+            entries
                 .iter()
                 .enumerate()
                 .map(|(idx, &line_number)| {
@@ -401,7 +397,7 @@ pub fn render_bookmarks_overlay(
                         .child(format!("Bookmark {}: Line {}", idx + 1, line_number))
                 })
                 .collect::<Vec<_>>(),
-        )
+        ),
     };
 
     // Track close button as focusable

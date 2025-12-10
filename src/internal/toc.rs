@@ -83,10 +83,9 @@ impl TableOfContents {
         // Find the last entry whose line_number is <= current_line
         let mut current_idx = None;
         for (idx, entry) in self.entries.iter().enumerate() {
-            if entry.line_number <= current_line {
-                current_idx = Some(idx);
-            } else {
-                break;
+            match entry.line_number <= current_line {
+                true => current_idx = Some(idx),
+                false => break,
             }
         }
 
@@ -100,11 +99,14 @@ fn extract_text_from_node<'a>(node: &'a Node<'a, std::cell::RefCell<Ast>>) -> St
 
     for child in node.children() {
         let child_ast = child.data.borrow();
-        if let NodeValue::Text(ref t) = child_ast.value {
-            text.push_str(t);
-        } else {
-            // Recursively extract from nested nodes
-            text.push_str(&extract_text_from_node(child));
+        match &child_ast.value {
+            NodeValue::Text(t) => {
+                text.push_str(t);
+            }
+            _ => {
+                // Recursively extract from nested nodes
+                text.push_str(&extract_text_from_node(child));
+            }
         }
     }
 
