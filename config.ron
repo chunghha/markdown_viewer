@@ -25,10 +25,10 @@
         space_scroll_percentage: 0.2,
     ),
     theme: (
-        theme: "Ayu Dark",
+        theme: "Zoegi Light",
         primary_font: "Google Sans Code",
         code_font: "monospace",
-        base_text_size: 13.200001,
+        base_text_size: 17.2,
         line_height_multiplier: 1.5,
         content_height_buffer: 200.0,
     ),

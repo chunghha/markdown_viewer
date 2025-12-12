@@ -47,6 +47,7 @@ A desktop Markdown viewer built with Rust and GPUI, featuring advanced scrolling
 - **Toggle Help Overlay**: `Cmd+H` to toggle help overlay for showing shortcuts
 - **Toggle TOC**: `Cmd+Z` to toggle Table of Contents sidebar
 - **Toggle Theme**: `Cmd+Shift+T` to toggle between Light and Dark themes
+- **Cycle Theme Family**: `Cmd+Shift+N` to cycle through available theme families
 - **Arrow Keys**: `↑`/`↓` for 20px incremental scrolling
 - **Page Navigation**: `Page Up`/`Page Down` for 80% viewport scrolling
 - **Document Navigation**: `Home`/`End` for jumping to top/bottom

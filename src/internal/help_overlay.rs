@@ -79,6 +79,7 @@ pub fn help_panel(theme_colors: &crate::internal::theme::ThemeColors) -> impl In
                         .child(shortcut_row("Cmd + +", "Increase Font Size"))
                         .child(shortcut_row("Cmd + -", "Decrease Font Size"))
                         .child(shortcut_row("Cmd + Shift + T", "Toggle Theme"))
+                        .child(shortcut_row("Cmd + Shift + N", "Cycle Theme Family"))
                         .child(shortcut_row("Cmd + Q", "Quit"))
                         .child(shortcut_row("Esc", "Close Overlay / Search")),
                 ),
