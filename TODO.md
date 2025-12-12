@@ -17,7 +17,7 @@ The core infrastructure has been **fully implemented and tested**. The applicati
 - [x] **Search Functionality**: Implemented full text search with highlighting and navigation
 - [x] **Global Shortcuts**: Added Cmd+T/B/Q and font size controls
 - [x] **Visual Polish**: Added version badge and refined styling
-- [x] **Comprehensive Testing**: 77 tests covering all functionality
+- [x] **Comprehensive Testing**: 82 tests covering all functionality
 - [x] **Documentation Update**: Updated all project documentation
 - [x] **File Watching**: Auto-reload on file changes with scroll position preservation
 - [x] **Responsive Table Layout**: Dynamic column widths with minimum width enforcement
@@ -27,6 +27,7 @@ The core infrastructure has been **fully implemented and tested**. The applicati
 - [x] **Go-to-Line Functionality**: Implemented line number navigation with Cmd+G/Ctrl+G shortcut
 - [x] **Table of Contents Navigation**: Right-side TOC sidebar with hierarchical navigation (levels 2-4)
 - [x] **Theme System**: Light/Dark themes with Cmd+Shift+T toggle and persistence
+- [x] **JSON Theme System**: Themes loaded from JSON files (`themes/` directory) with ThemeRegistry
 
 ## Next Development Phases 🚀
 
@@ -176,7 +177,7 @@ The core infrastructure has been **fully implemented and tested**. The applicati
 ### Current Limitations
 - **Fixed File**: Currently only loads TODO.md (Fixed: now accepts CLI args)
 - **Basic Rendering**: Limited Markdown feature support
-- **No Themes**: Single color scheme
+- ~~**No Themes**: Single color scheme~~ (Fixed: JSON-based theme system in v0.12.0)
 
 ### Technical Considerations
 - **Window Bounds**: Need proper GPUI window dimension access
@@ -208,7 +209,7 @@ The core infrastructure has been **fully implemented and tested**. The applicati
 
 ### Pending Decisions
 - **File Loading Strategy**: CLI args vs file dialog vs drag-and-drop
-- **Theme System**: CSS-like vs programmatic styling
+- ✅ **Theme System**: JSON-based theme loading from `themes/` directory (implemented v0.12.0)
 - **Plugin Architecture**: Trait-based vs script-based extensions
 
 ## 🎉 Milestone: Infrastructure Complete
@@ -221,6 +222,7 @@ The markdown viewer now has **production-ready infrastructure** with:
 - Smooth mouse wheel support
 - Complete keyboard navigation
 - Robust error handling
-- Comprehensive test coverage (77 tests including theme system)
+- JSON-based theme system with dynamic loading
+- Comprehensive test coverage (82 tests including theme system)
 
 **Ready for advanced feature development!**

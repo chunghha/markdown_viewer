@@ -1,0 +1,49 @@
+{
+  "name": "High Contrast",
+  "themes": [
+    {
+      "name": "High Contrast Light",
+      "mode": "light",
+      "colors": {
+        "background": "#ffffffff",
+        "foreground": "#000000ff",
+        "muted.background": "#ffffffff",
+        "muted.foreground": "#0000ccff",
+        "popover.background": "#ffffffff",
+        "popover.foreground": "#000000ff",
+        "border": "#000000ff",
+        "input.background": "#ffffffff",
+        "primary.background": "#0000ffff",
+        "primary.foreground": "#ffffffff",
+        "secondary.background": "#ffff00ff",
+        "secondary.foreground": "#000000ff",
+        "accent.background": "#0000ffff",
+        "accent.foreground": "#ffffffff",
+        "ring": "#0000ffff"
+      },
+      "highlight": {}
+    },
+    {
+      "name": "High Contrast Dark",
+      "mode": "dark",
+      "colors": {
+        "background": "#000000ff",
+        "foreground": "#ffffffff",
+        "muted.background": "#000000ff",
+        "muted.foreground": "#ffff00ff",
+        "popover.background": "#000000ff",
+        "popover.foreground": "#ffffffff",
+        "border": "#ffffffff",
+        "input.background": "#000000ff",
+        "primary.background": "#ffff00ff",
+        "primary.foreground": "#000000ff",
+        "secondary.background": "#0000ffff",
+        "secondary.foreground": "#ffffffff",
+        "accent.background": "#ffff00ff",
+        "accent.foreground": "#000000ff",
+        "ring": "#ffff00ff"
+      },
+      "highlight": {}
+    }
+  ]
+}

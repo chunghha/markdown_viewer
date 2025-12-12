@@ -28,6 +28,16 @@ fn main() -> Result<()> {
 
     info!("Starting Markdown Viewer");
 
+    // Initialize themes
+    let themes_dir = std::env::current_dir()
+        .map(|d| d.join("themes"))
+        .unwrap_or_else(|_| std::path::PathBuf::from("themes"));
+
+    match markdown_viewer::init_themes(&themes_dir) {
+        Ok(_) => info!("Themes initialized from {:?}", themes_dir),
+        Err(e) => warn!("Failed to initialize themes from {:?}: {}", themes_dir, e),
+    }
+
     // Load configuration
     let config = AppConfig::load().unwrap_or_else(|e| {
         warn!("Failed to load config: {}. Using defaults.", e);

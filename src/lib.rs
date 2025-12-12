@@ -31,6 +31,9 @@ pub use internal::image_loader::fetch_and_decode_image;
 // help UI without reaching into the private `internal` module tree.
 pub use internal::help_overlay::{help_panel, shortcut_row};
 
+// Re-export theme system for binary initialization
+pub use internal::theme::{init as init_themes, registry as theme_registry};
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -555,62 +558,36 @@ mod tests {
     // ---- Theme Tests ------------------------------------------------
 
     #[test]
-    fn theme_enum_has_light_and_dark_variants() {
-        use internal::theme::Theme;
-        // Test that Theme enum exists and has both variants
-        let light = Theme::Light;
-        let dark = Theme::Dark;
+    fn theme_mode_has_light_and_dark_variants() {
+        use internal::theme::ThemeMode;
+        // Test that ThemeMode enum exists and has both variants
+        let light = ThemeMode::Light;
+        let dark = ThemeMode::Dark;
 
         // Verify they are different
         assert_ne!(light, dark);
     }
 
     #[test]
-    fn theme_colors_provide_all_required_colors() {
-        use internal::theme::{Theme, ThemeColors};
-        // Test that both themes provide all required color values
-        let light_colors = ThemeColors::from(Theme::Light);
-        let dark_colors = ThemeColors::from(Theme::Dark);
-
-        // Verify colors are different between themes
-        assert_ne!(light_colors.bg_color, dark_colors.bg_color);
-        assert_ne!(light_colors.text_color, dark_colors.text_color);
-        assert_ne!(light_colors.code_bg_color, dark_colors.code_bg_color);
-    }
-
-    #[test]
-    fn theme_toggle_switches_between_light_and_dark() {
-        use internal::theme::Theme;
-        // Test theme toggling
-        let mut theme = Theme::Light;
-        theme = theme.toggle();
-        assert_eq!(theme, Theme::Dark);
-
-        theme = theme.toggle();
-        assert_eq!(theme, Theme::Light);
-    }
-
-    #[test]
-    fn theme_config_defaults_to_light() {
+    fn theme_config_defaults_to_zoegi_light() {
         use config::ThemeConfig;
         let config = ThemeConfig::default();
-        assert_eq!(config.theme, internal::theme::Theme::Light);
+        assert_eq!(config.theme, "Zoegi Light");
     }
 
     #[test]
     fn theme_persists_in_config_file() {
         use config::AppConfig;
-        use internal::theme::Theme;
         use std::fs;
 
         let mut config = AppConfig::default();
-        config.theme.theme = Theme::Dark;
+        config.theme.theme = "Zoegi Dark".to_string();
 
         let path = "test_theme_persist.ron";
         config.save_to_file(path).expect("Failed to save config");
 
         let loaded = AppConfig::load_from_file(path).expect("Failed to load config");
-        assert_eq!(loaded.theme.theme, Theme::Dark);
+        assert_eq!(loaded.theme.theme, "Zoegi Dark");
 
         fs::remove_file(path).ok();
     }

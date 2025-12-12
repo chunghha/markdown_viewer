@@ -25,7 +25,7 @@
         space_scroll_percentage: 0.2,
     ),
     theme: (
-        theme: Light,
+        theme: "Zoegi Light",
         primary_font: "Google Sans Code",
         code_font: "monospace",
         base_text_size: 19.2,

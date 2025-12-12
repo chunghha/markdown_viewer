@@ -64,14 +64,13 @@ fn render_highlighted_code_block<T: 'static>(
     code: String,
     language: String,
     theme_colors: &ThemeColors,
-    current_theme: super::theme::Theme,
     cx: &mut Context<T>,
 ) -> AnyElement {
     let syntax_set = get_syntax_set();
     let theme_set = get_theme_set();
 
     // Use theme-appropriate syntect theme
-    let syntect_theme_name = current_theme.syntect_theme();
+    let syntect_theme_name = theme_colors.mode.syntect_theme();
     let theme = theme_set
         .themes
         .get(syntect_theme_name)
@@ -182,7 +181,6 @@ fn render_markdown_ast_internal<'a, T: 'static>(
     search_state: Option<&super::search::SearchState>,
     viewport_width: f32,
     theme_colors: &ThemeColors,
-    current_theme: super::theme::Theme,
     cx: &mut Context<T>,
     image_loader: &mut dyn FnMut(&str) -> Option<ImageSource>,
     focused_element: Option<&super::viewer::FocusableElement>,
@@ -197,7 +195,6 @@ fn render_markdown_ast_internal<'a, T: 'static>(
                     search_state,
                     viewport_width,
                     theme_colors,
-                    current_theme,
                     cx,
                     image_loader,
                     focused_element,
@@ -222,7 +219,6 @@ fn render_markdown_ast_internal<'a, T: 'static>(
                     search_state,
                     viewport_width,
                     theme_colors,
-                    current_theme,
                     cx,
                     image_loader,
                     focused_element,
@@ -256,7 +252,6 @@ fn render_markdown_ast_internal<'a, T: 'static>(
                             search_state,
                             viewport_width,
                             theme_colors,
-                            current_theme,
                             cx,
                             image_loader,
                             focused_element,
@@ -298,7 +293,7 @@ fn render_markdown_ast_internal<'a, T: 'static>(
         NodeValue::CodeBlock(code_block) => {
             let language = code_block.info.clone();
             let code = code_block.literal.clone();
-            render_highlighted_code_block(code, language, theme_colors, current_theme, cx)
+            render_highlighted_code_block(code, language, theme_colors, cx)
         }
 
         NodeValue::List(list) => {
@@ -315,7 +310,6 @@ fn render_markdown_ast_internal<'a, T: 'static>(
                         search_state,
                         viewport_width,
                         theme_colors,
-                        current_theme,
                         cx,
                         image_loader,
                         focused_element,
@@ -485,7 +479,6 @@ fn render_markdown_ast_internal<'a, T: 'static>(
                     search_state,
                     viewport_width,
                     theme_colors,
-                    current_theme,
                     cx,
                     image_loader,
                     focused_element,
@@ -502,7 +495,6 @@ fn render_markdown_ast_internal<'a, T: 'static>(
                     search_state,
                     viewport_width,
                     theme_colors,
-                    current_theme,
                     cx,
                     image_loader,
                     focused_element,
@@ -519,7 +511,6 @@ fn render_markdown_ast_internal<'a, T: 'static>(
                     search_state,
                     viewport_width,
                     theme_colors,
-                    current_theme,
                     cx,
                     image_loader,
                     focused_element,
@@ -539,7 +530,6 @@ fn render_markdown_ast_internal<'a, T: 'static>(
                     search_state,
                     viewport_width,
                     theme_colors,
-                    current_theme,
                     cx,
                     image_loader,
                     focused_element,
@@ -575,7 +565,6 @@ fn render_markdown_ast_internal<'a, T: 'static>(
                         search_state,
                         viewport_width,
                         theme_colors,
-                        current_theme,
                         cx,
                         image_loader,
                         focused_element,
@@ -596,7 +585,6 @@ fn render_markdown_ast_internal<'a, T: 'static>(
                         search_state,
                         viewport_width,
                         theme_colors,
-                        current_theme,
                         cx,
                         image_loader,
                         focused_element,
@@ -616,7 +604,6 @@ fn render_markdown_ast_internal<'a, T: 'static>(
                         search_state,
                         viewport_width,
                         theme_colors,
-                        current_theme,
                         cx,
                         image_loader,
                         focused_element,
@@ -634,7 +621,6 @@ fn render_markdown_ast_internal<'a, T: 'static>(
                     search_state,
                     viewport_width,
                     theme_colors,
-                    current_theme,
                     cx,
                     image_loader,
                     focused_element,
@@ -653,7 +639,6 @@ fn render_markdown_ast_internal<'a, T: 'static>(
 pub fn render_markdown_ast<'a, T: 'static>(
     node: &'a AstNode<'a>,
     theme_colors: &ThemeColors,
-    current_theme: super::theme::Theme,
     cx: &mut Context<T>,
 ) -> AnyElement {
     const DEFAULT_VIEWPORT_WIDTH: f32 = 1200.0;
@@ -663,7 +648,6 @@ pub fn render_markdown_ast<'a, T: 'static>(
         None,
         DEFAULT_VIEWPORT_WIDTH,
         theme_colors,
-        current_theme,
         cx,
         &mut |_| None,
         None,
@@ -677,7 +661,6 @@ pub fn render_markdown_ast_with_loader<'a, T: 'static>(
     node: &'a AstNode<'a>,
     markdown_file_path: Option<&Path>,
     theme_colors: &ThemeColors,
-    current_theme: super::theme::Theme,
     cx: &mut Context<T>,
     image_loader: &mut dyn FnMut(&str) -> Option<ImageSource>,
 ) -> AnyElement {
@@ -688,7 +671,6 @@ pub fn render_markdown_ast_with_loader<'a, T: 'static>(
         None,
         DEFAULT_VIEWPORT_WIDTH,
         theme_colors,
-        current_theme,
         cx,
         image_loader,
         None,
@@ -705,7 +687,6 @@ pub fn render_markdown_ast_with_search<'a, T: 'static>(
     search_state: Option<&super::search::SearchState>,
     viewport_width: f32,
     theme_colors: &ThemeColors,
-    current_theme: super::theme::Theme,
     cx: &mut Context<T>,
     image_loader: &mut dyn FnMut(&str) -> Option<ImageSource>,
     focused_element: Option<&super::viewer::FocusableElement>,
@@ -716,7 +697,6 @@ pub fn render_markdown_ast_with_search<'a, T: 'static>(
         search_state,
         viewport_width,
         theme_colors,
-        current_theme,
         cx,
         image_loader,
         focused_element,
@@ -733,7 +713,6 @@ fn render_table_row<'a, T: 'static>(
     search_state: Option<&super::search::SearchState>,
     viewport_width: f32,
     theme_colors: &ThemeColors,
-    current_theme: super::theme::Theme,
     cx: &mut Context<T>,
     image_loader: &mut dyn FnMut(&str) -> Option<ImageSource>,
     focused_element: Option<&super::viewer::FocusableElement>,
@@ -765,7 +744,6 @@ fn render_table_row<'a, T: 'static>(
                 search_state,
                 viewport_width,
                 theme_colors,
-                current_theme,
                 cx,
                 image_loader,
                 focused_element,
@@ -786,7 +764,6 @@ fn render_table_cell<'a, T: 'static>(
     search_state: Option<&super::search::SearchState>,
     viewport_width: f32,
     theme_colors: &ThemeColors,
-    current_theme: super::theme::Theme,
     cx: &mut Context<T>,
     image_loader: &mut dyn FnMut(&str) -> Option<ImageSource>,
     focused_element: Option<&super::viewer::FocusableElement>,
@@ -818,7 +795,6 @@ fn render_table_cell<'a, T: 'static>(
                 search_state,
                 viewport_width,
                 theme_colors,
-                current_theme,
                 cx,
                 image_loader,
                 focused_element,

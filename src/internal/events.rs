@@ -99,10 +99,14 @@ pub fn handle_key_down(
         && event.keystroke.key.as_str() == "t"
     {
         debug!("Theme toggle shortcut triggered (Cmd/Ctrl+Shift+T)");
-        viewer.config.theme.theme = viewer.config.theme.theme.toggle();
-        // Save config to persist theme preference
-        if let Err(e) = viewer.config.save_to_file("config.ron") {
-            debug!("Failed to save theme preference: {}", e);
+        if let Some(new_theme) =
+            crate::internal::theme::registry().toggle_theme(&viewer.config.theme.theme)
+        {
+            viewer.config.theme.theme = new_theme;
+            // Save config to persist theme preference
+            if let Err(e) = viewer.config.save_to_file("config.ron") {
+                debug!("Failed to save theme preference: {}", e);
+            }
         }
         cx.notify();
         return;
@@ -115,6 +119,26 @@ pub fn handle_key_down(
     {
         debug!("Toggle bookmarks list shortcut triggered (Cmd/Ctrl+Shift+B)");
         viewer.show_bookmarks = !viewer.show_bookmarks;
+        cx.notify();
+        return;
+    }
+
+    // Check for Cmd+Shift+N (macOS) or Ctrl+Shift+N (other platforms) to cycle theme families
+    if (event.keystroke.modifiers.platform || event.keystroke.modifiers.control)
+        && event.keystroke.modifiers.shift
+        && event.keystroke.key.as_str() == "n"
+    {
+        debug!("Theme cycle shortcut triggered (Cmd/Ctrl+Shift+N)");
+        if let Some(new_theme) =
+            crate::internal::theme::registry().cycle_theme(&viewer.config.theme.theme)
+        {
+            info!("Cycling theme to: {}", new_theme);
+            viewer.config.theme.theme = new_theme;
+            // Save config to persist theme preference
+            if let Err(e) = viewer.config.save_to_file("config.ron") {
+                debug!("Failed to save theme preference: {}", e);
+            }
+        }
         cx.notify();
         return;
     }

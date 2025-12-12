@@ -93,9 +93,9 @@ pub struct ScrollConfig {
 /// Theme configuration
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ThemeConfig {
-    /// Active theme (Light or Dark)
-    #[serde(default)]
-    pub theme: crate::internal::theme::Theme,
+    /// Active theme name
+    #[serde(default = "default_theme_name")]
+    pub theme: String,
 
     /// Primary font family
     pub primary_font: String,
@@ -111,6 +111,10 @@ pub struct ThemeConfig {
 
     /// Content height buffer in pixels
     pub content_height_buffer: f32,
+}
+
+fn default_theme_name() -> String {
+    "Zoegi Light".to_string()
 }
 
 /// PDF export configuration
@@ -180,7 +184,7 @@ impl Default for ScrollConfig {
 impl Default for ThemeConfig {
     fn default() -> Self {
         Self {
-            theme: crate::internal::theme::Theme::Light,
+            theme: default_theme_name(),
             primary_font: "Google Sans Code".to_string(),
             code_font: "monospace".to_string(),
             base_text_size: 19.2,
@@ -333,7 +337,7 @@ mod tests {
     #[test]
     fn default_theme_config() {
         let config = ThemeConfig::default();
-        assert_eq!(config.theme, crate::internal::theme::Theme::Light);
+        assert_eq!(config.theme, "Zoegi Light");
         assert_eq!(config.primary_font, "Google Sans Code");
         assert_eq!(config.code_font, "monospace");
         assert_eq!(config.base_text_size, 19.2);

@@ -893,7 +893,7 @@ impl Render for MarkdownViewer {
 
         debug!("AST parsing complete");
         let mut missing_images = HashSet::new();
-        let theme_colors = get_theme_colors(self.config.theme.theme);
+        let theme_colors = get_theme_colors(&self.config.theme.theme);
         let element = div()
             .track_focus(&self.focus_handle)
             .flex()
@@ -980,10 +980,9 @@ impl Render for MarkdownViewer {
                                 }
                                 false => self.viewport_width - 64.0,
                             },
-                            &theme_colors,
-                            self.config.theme.theme,
+                            theme_colors,
                             cx,
-                            &mut |path| match self.image_cache.get(path) {
+                            &mut |path: &str| match self.image_cache.get(path) {
                                 Some(ImageState::Loaded(src)) => Some(src.clone()),
                                 None => {
                                     missing_images.insert(path.to_string());
@@ -1012,13 +1011,13 @@ impl Render for MarkdownViewer {
         };
 
         // Bookmarks Overlay
-        let element = match ui::render_bookmarks_overlay(self, &theme_colors, cx) {
+        let element = match ui::render_bookmarks_overlay(self, theme_colors, cx) {
             Some(overlay) => element.child(overlay),
             None => element,
         };
 
         // Help Overlay
-        let element = match ui::render_help_overlay(self, &theme_colors) {
+        let element = match ui::render_help_overlay(self, theme_colors) {
             Some(overlay) => element.child(overlay),
             None => element,
         };
@@ -1030,25 +1029,25 @@ impl Render for MarkdownViewer {
         };
 
         // PDF Export Notification Overlay
-        let element = match ui::render_pdf_export_overlay(self, &theme_colors) {
+        let element = match ui::render_pdf_export_overlay(self, theme_colors) {
             Some(overlay) => element.child(overlay),
             None => element,
         };
 
         // Search History Notification Overlay
-        let element = match ui::render_search_history_notification(self, &theme_colors, cx) {
+        let element = match ui::render_search_history_notification(self, theme_colors, cx) {
             Some(overlay) => element.child(overlay),
             None => element,
         };
 
         // PDF Overwrite Confirmation Overlay
-        let element = match ui::render_pdf_overwrite_confirm(self, &theme_colors) {
+        let element = match ui::render_pdf_overwrite_confirm(self, theme_colors) {
             Some(overlay) => element.child(overlay),
             None => element,
         };
 
         // TOC Sidebar
-        let element = match ui::render_toc_sidebar(self, &theme_colors, cx) {
+        let element = match ui::render_toc_sidebar(self, theme_colors, cx) {
             Some(sidebar) => element.child(sidebar),
             None => element,
         };

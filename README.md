@@ -222,7 +222,7 @@ cargo fmt
 - **Responsive**: 60 FPS scrolling with large documents
 
 ### Code Quality
-- **71 Unit Tests**: Comprehensive test coverage for scrolling, file handling, configuration, format validation, table rendering, file watching, and theme system
+- **82 Unit Tests**: Comprehensive test coverage for scrolling, file handling, configuration, format validation, table rendering, file watching, and JSON theme system
 - **Clippy Clean**: Passes all Rust linting checks
 - **Well Documented**: Inline documentation and implementation guides
 
@@ -285,8 +285,8 @@ task pre-commit
 ## Future Enhancements
 
 - **Configuration UI**: In-app settings panel
-- **Theme System Extensions**: Custom themes and additional color schemes
-- **Export Options**: PDF/HTML export functionality
+- **Custom Themes**: Create your own themes by adding JSON files to `themes/` directory
+- **Export Options**: HTML export functionality (PDF already available)
 - **Performance**: Lazy loading for very large files
 
 ## Resources

@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.0] - 2025-12-11
+
+### Added
+- **JSON Theme System**: Complete refactor of theme system to load themes from external JSON files
+  - Themes loaded dynamically from `themes/` directory at startup
+  - `ThemeRegistry` manages all loaded themes with lookup by name
+  - Theme families enable automatic Light ↔ Dark toggling
+  - New `ThemeMode` enum replaces hardcoded `Theme` enum
+- **Dynamic Theme Loading**: Parse JSON theme files (e.g., `zoegi.json`) with color definitions
+  - Supports nested color keys for editor, syntax, and UI elements
+  - Fallback defaults for missing color values
+- **String-Based Theme Selection**: Config now uses theme names (e.g., `"Zoegi Light"`)
+  - Previous enum-based selection replaced with flexible string matching
+  - Easier addition of custom themes without code changes
+
+### Changed
+- `config.ron` uses `theme: "Zoegi Light"` instead of `theme: Light`
+- `ThemeConfig.theme` field changed from enum to `String`
+- Rendering functions no longer require `Theme` enum parameter
+- Theme toggle (`Cmd+Shift+T`) uses registry lookup for opposite mode
+
+### Dependencies
+- Added `serde_json` for JSON theme file deserialization
+
 ## [0.11.1] - 2025-11-23
 
 ### Fixed

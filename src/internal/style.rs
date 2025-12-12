@@ -3,7 +3,7 @@
 //! This module contains all visual styling constants including colors,
 //! fonts, sizes, and spacing values.
 
-use super::theme::{Theme, ThemeColors};
+use super::theme::ThemeColors;
 use gpui::Rgba;
 
 // ---- Fonts -----------------------------------------------------------------
@@ -274,10 +274,26 @@ pub const FOCUS_RING_WIDTH: f32 = 2.0;
 
 // ---- Theme-based Color Access -----------------------------------------
 
-/// Get theme colors for the given theme
+/// Get theme colors for the given theme name
 ///
 /// This function provides access to all colors based on the active theme.
 /// Prefer using this over the individual color constants when theme support is needed.
-pub fn get_theme_colors(theme: Theme) -> ThemeColors {
-    ThemeColors::from(theme)
+pub fn get_theme_colors(theme_name: &str) -> &'static ThemeColors {
+    super::theme::registry().get(theme_name).unwrap_or_else(|| {
+        tracing::warn!("Theme '{}' not found, falling back to default", theme_name);
+        // Fallback to the first available theme or a specific default if initialized
+        super::theme::registry()
+            .get("Zoegi Light")
+            .or_else(|| {
+                // If completely empty (shouldn't happen if initialized), return a static default?
+                // Accessing internal default via registry might be hard if registry is empty.
+                // But we can construct one temporarily? No, return type is static ref.
+                // Best effort: panic if no themes (user configuration error), or return whatever is there.
+                super::theme::registry()
+                    .list_names()
+                    .first()
+                    .and_then(|n| super::theme::registry().get(n))
+            })
+            .expect("No themes loaded! Ensure ‘themes/’ directory exists.")
+    })
 }
