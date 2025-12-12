@@ -1,24 +1,74 @@
 use gpui::{FontWeight, IntoElement, Rgba, div, prelude::*, px};
 
 use crate::internal::help_overlay::help_panel;
-use crate::internal::style::{
-    GOTO_LINE_OVERLAY_BG_COLOR, GOTO_LINE_OVERLAY_TEXT_COLOR, VERSION_BADGE_BG_COLOR,
-    VERSION_BADGE_TEXT_COLOR,
-};
+use crate::internal::style::{GOTO_LINE_OVERLAY_BG_COLOR, GOTO_LINE_OVERLAY_TEXT_COLOR};
 use crate::internal::viewer::MarkdownViewer;
 
-pub fn render_version_badge() -> impl IntoElement {
+pub fn render_status_bar(
+    viewer: &MarkdownViewer,
+    theme_colors: &crate::internal::theme::ThemeColors,
+    cx: &mut gpui::Context<MarkdownViewer>,
+) -> impl IntoElement {
+    let filename = viewer
+        .markdown_file_path
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("Untitled")
+        .to_string();
+
+    let total_lines = viewer.markdown_content.lines().count().max(1);
+    let current_line = viewer.get_current_line_number();
+    let percentage = (current_line as f32 / total_lines as f32 * 100.0) as usize;
+
     div()
         .absolute()
-        .bottom_3()
-        .right_4()
-        .bg(VERSION_BADGE_BG_COLOR)
-        .text_color(VERSION_BADGE_TEXT_COLOR)
-        .rounded_md()
-        .px_2()
-        .py_1()
-        .text_xs()
-        .child(format!("v{}", env!("CARGO_PKG_VERSION")))
+        .bottom_0()
+        .left_0()
+        .right_0()
+        .h(px(30.0))
+        .bg(theme_colors.toc_bg_color)
+        .border_t_1()
+        .border_color(theme_colors.toc_border_color)
+        .flex()
+        .items_center()
+        .justify_between()
+        .px_4()
+        .text_size(px(12.0))
+        .text_color(theme_colors.text_color)
+        .child(
+            div()
+                .flex()
+                .gap_4()
+                .child(div().font_weight(FontWeight::BOLD).child(filename))
+                .child(format!("{} lines", total_lines)),
+        )
+        .child(
+            div()
+                .flex()
+                .gap_4()
+                .child(format!("Ln {}, Col 1", current_line)) // Col is always 1 for now
+                .child(format!("{}%", percentage)),
+        )
+        .child(
+            div()
+                .flex()
+                .gap_4()
+                .child(viewer.config.theme.theme.clone())
+                .child(
+                    div()
+                        .cursor_pointer()
+                        .font_weight(FontWeight::BOLD)
+                        .child("Help")
+                        .on_mouse_down(
+                            gpui::MouseButton::Left,
+                            cx.listener(|this, _, _, cx| {
+                                this.show_help = !this.show_help;
+                                cx.notify();
+                            }),
+                        ),
+                )
+                .child(format!("v{}", env!("CARGO_PKG_VERSION"))),
+        )
 }
 
 pub fn render_search_overlay(viewer: &MarkdownViewer) -> Option<impl IntoElement> {

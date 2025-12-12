@@ -29,7 +29,7 @@ A desktop Markdown viewer built with Rust and GPUI, featuring advanced scrolling
 - **Visual Feedback**: Search overlay with match count and status
 
 ### Visual Enhancements
-- **Version Badge**: Displays current version in bottom-right corner
+- **Interactive Status Bar**: Persistent footer with file info, scroll position, theme indicator, and **Help button**
 - **Styled Interface**: Custom colors and fonts for a polished look
 - **Table of Contents**: Right-side sidebar with hierarchical navigation (levels 2-4)
   - Toggle with `Cmd+Z` or top-right button

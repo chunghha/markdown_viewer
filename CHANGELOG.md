@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.6] - 2025-12-11
+
+### Added
+- **Interactive Status Bar**: Fixed footer replacing the floating version badge
+  - Displays file name, total lines, current position (line & %), and theme
+- **Help Button**: Dedicated "Help" button in the status bar to toggle shortcuts overlay
+- **UI Refresh**: Cleaner interface with consistent bottom bar styling
+
 ## [0.12.5] - 2025-12-11
 
 ### Added

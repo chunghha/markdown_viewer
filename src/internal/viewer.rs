@@ -1045,8 +1045,8 @@ impl Render for MarkdownViewer {
                         )),
                 ),
             )
-            // Version Badge
-            .child(ui::render_version_badge());
+            // Interactive Status Bar
+            .child(ui::render_status_bar(self, theme_colors, cx));
 
         // Add search indicator overlay if search is active
         let element = match ui::render_search_overlay(self) {

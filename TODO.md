@@ -40,10 +40,11 @@ The core infrastructure has been **fully implemented and tested**. The applicati
   - [x] Paginated Help Overlay
 
 ### v0.12.6: Visual Polish
-- [ ] **Interactive Status Bar**
-  - Sticky footer bar
-  - Current File Name, Line Number, Percentage
-  - Theme indicator
+- [x] **Interactive Status Bar**
+  - [x] Sticky footer bar
+  - [x] Current File Name, Line Number, Percentage
+  - [x] Theme indicator
+  - [x] Help Button toggle
 
 ### v0.13.0: File Management
 - [ ] **Fuzzy File Finder**
