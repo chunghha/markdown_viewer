@@ -59,6 +59,12 @@ pub enum ImageState {
     Error,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum MarkMode {
+    Set,
+    Jump,
+}
+
 pub struct MarkdownViewer {
     pub markdown_content: String,
     pub markdown_file_path: PathBuf,
@@ -120,6 +126,14 @@ pub struct MarkdownViewer {
     pub focusable_elements: Vec<FocusableElement>,
     /// Index of the currently focused element (None means no focus)
     pub current_focus_index: Option<usize>,
+    /// v0.12.5: Map of marks to scroll positions
+    pub marks: HashMap<char, f32>,
+    /// v0.12.5: Current mark mode (Set/Jump)
+    pub mark_mode: Option<MarkMode>,
+    /// v0.12.5: Track if 'z' was pressed for 'zz' command
+    pub z_pressed_once: bool,
+    /// v0.12.5: Current help overlay page (0 = General, 1 = Navigation)
+    pub help_page: usize,
 }
 
 impl MarkdownViewer {
@@ -178,6 +192,10 @@ impl MarkdownViewer {
             search_history_message: None,
             focusable_elements: Vec::new(),
             current_focus_index: None,
+            marks: HashMap::new(),
+            mark_mode: None,
+            z_pressed_once: false,
+            help_page: 0,
         };
 
         viewer.recompute_max_scroll();

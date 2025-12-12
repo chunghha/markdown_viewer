@@ -36,9 +36,77 @@ pub fn shortcut_row(key: &str, desc: &str) -> impl IntoElement {
 ///
 /// The returned element is meant to be placed inside a styled container by the caller,
 /// for example wrapped with background, shadow, padding, etc.
-pub fn help_panel(theme_colors: &crate::internal::theme::ThemeColors) -> impl IntoElement {
-    // Panel with background and text color applied so callers can place this directly
-    // into the centered overlay container without re-styling.
+pub fn help_panel(
+    theme_colors: &crate::internal::theme::ThemeColors,
+    page_index: usize,
+) -> impl IntoElement {
+    let content = match page_index {
+        0 => div()
+            .flex_col()
+            .gap_4()
+            .child(
+                div()
+                    .text_xl()
+                    .font_weight(FontWeight::BOLD)
+                    .child("Keyboard Shortcuts (1/2)"),
+            )
+            .child(
+                div()
+                    .flex_col()
+                    .gap_2()
+                    .child(shortcut_row("Cmd + H", "Toggle Help"))
+                    .child(shortcut_row("Cmd + Z", "Toggle TOC"))
+                    .child(shortcut_row("Cmd + F", "Search (Up/Down for History)"))
+                    .child(shortcut_row("Cmd + Shift + H", "Clear Search History"))
+                    .child(shortcut_row("Cmd + G", "Go to Line"))
+                    .child(shortcut_row("Cmd + E", "Export to PDF"))
+                    .child(shortcut_row("Cmd + Shift + T", "Toggle Theme"))
+                    .child(shortcut_row("Cmd + Shift + N", "Cycle Theme Family"))
+                    .child(shortcut_row("Esc", "Close Overlay / Search")),
+            )
+            .child(
+                div()
+                    .text_color(theme_colors.text_color)
+                    .opacity(0.7)
+                    .text_sm()
+                    .child("Use Right Arrow for Navigation shortcuts →"),
+            ),
+        _ => div()
+            .flex_col()
+            .gap_4()
+            .child(
+                div()
+                    .text_xl()
+                    .font_weight(FontWeight::BOLD)
+                    .child("Navigation Shortcuts (2/2)"),
+            )
+            .child(
+                div()
+                    .flex_col()
+                    .gap_2()
+                    .child(shortcut_row("j / k", "Scroll Down / Up"))
+                    .child(shortcut_row("Arrow keys", "Scroll limit"))
+                    .child(shortcut_row("Cmd + D / U", "Half-Page Down / Up"))
+                    .child(shortcut_row("PageUp / Down", "Page Scroll"))
+                    .child(shortcut_row("Space (+Shift)", "Page Scroll"))
+                    .child(shortcut_row("g", "Scroll to Top"))
+                    .child(shortcut_row("G (Shift+g)", "Scroll to Bottom"))
+                    .child(shortcut_row("Cmd + T / B", "Scroll to Top / Bottom"))
+                    .child(shortcut_row("zz", "Center View"))
+                    .child(shortcut_row("m + <char>", "Set Mark"))
+                    .child(shortcut_row("' + <char>", "Jump to Mark"))
+                    .child(shortcut_row("Cmd + D", "Toggle Bookmark"))
+                    .child(shortcut_row("Cmd + Shift + B", "View Bookmarks")),
+            )
+            .child(
+                div()
+                    .text_color(theme_colors.text_color)
+                    .opacity(0.7)
+                    .text_sm()
+                    .child("← Use Left Arrow for General shortcuts"),
+            ),
+    };
+
     div()
         .bg(theme_colors.bg_color)
         .text_color(theme_colors.text_color)
@@ -52,36 +120,5 @@ pub fn help_panel(theme_colors: &crate::internal::theme::ThemeColors) -> impl In
             b: 0.8,
             a: 1.0,
         })
-        .child(
-            div()
-                .flex_col()
-                .gap_4()
-                .child(
-                    div()
-                        .text_xl()
-                        .font_weight(FontWeight::BOLD)
-                        .child("Keyboard Shortcuts"),
-                )
-                .child(
-                    div()
-                        .flex_col()
-                        .gap_2()
-                        .child(shortcut_row("Cmd + H", "Toggle Help"))
-                        .child(shortcut_row("Cmd + Z", "Toggle TOC"))
-                        .child(shortcut_row("Cmd + F", "Search (Up/Down for History)"))
-                        .child(shortcut_row("Cmd + Shift + H", "Clear Search History"))
-                        .child(shortcut_row("Cmd + D", "Toggle Bookmark"))
-                        .child(shortcut_row("Cmd + Shift + B", "View Bookmarks"))
-                        .child(shortcut_row("Cmd + G", "Go to Line"))
-                        .child(shortcut_row("Cmd + E", "Export to PDF"))
-                        .child(shortcut_row("Cmd + T", "Scroll to Top"))
-                        .child(shortcut_row("Cmd + B", "Scroll to Bottom"))
-                        .child(shortcut_row("Cmd + +", "Increase Font Size"))
-                        .child(shortcut_row("Cmd + -", "Decrease Font Size"))
-                        .child(shortcut_row("Cmd + Shift + T", "Toggle Theme"))
-                        .child(shortcut_row("Cmd + Shift + N", "Cycle Theme Family"))
-                        .child(shortcut_row("Cmd + Q", "Quit"))
-                        .child(shortcut_row("Esc", "Close Overlay / Search")),
-                ),
-        )
+        .child(content)
 }

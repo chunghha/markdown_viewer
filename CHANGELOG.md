@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.5] - 2025-12-11
+
+### Added
+- **Quit Shortcuts**: `q` and `Ctrl+C` to instantly quit the application
+- **Advanced Vim-like Navigation**:
+  - `Ctrl+d` / `Ctrl+u` for half-page scrolling down/up
+  - `g` to scroll to top, `G` (Shift+g) to scroll to bottom
+  - `zz` to center the current view
+- **Marks System**:
+  - `m<char>` to set a mark at current scroll position (e.g., `ma`)
+  - `'<char>` to jump back to a set mark (e.g., `'a`)
+- **Paginated Help Overlay**:
+  - Split help shortcuts into "General" and "Navigation" pages
+  - Use Left/Right arrow keys to switch between help pages
+
 ## [0.12.0] - 2025-12-11
 
 ### Added

@@ -29,6 +29,37 @@ The core infrastructure has been **fully implemented and tested**. The applicati
 - [x] **Theme System**: Light/Dark themes with Cmd+Shift+T toggle and persistence
 - [x] **JSON Theme System**: Themes loaded from JSON files (`themes/` directory) with ThemeRegistry
 
+## Key Release Roadmap 📅
+
+### v0.12.5: Advanced Navigation
+- [x] **Advanced Vim-like Navigation** (High Impact)
+  - [x] Half-page scrolling (`Ctrl+d`, `Ctrl+u`)
+  - [x] Center cursor/line (`zz`)
+  - [x] Marks (`m<char>`, `'<char>`)
+  - [x] Quit shortcuts (`q`, `Ctrl+C`)
+  - [x] Paginated Help Overlay
+
+### v0.12.6: Visual Polish
+- [ ] **Interactive Status Bar**
+  - Sticky footer bar
+  - Current File Name, Line Number, Percentage
+  - Theme indicator
+
+### v0.13.0: File Management
+- [ ] **Fuzzy File Finder**
+  - File picker overlay (`Cmd+P` / `Space f`)
+  - List files in current directory and subdirectories
+
+### v0.13.1: Usability
+- [ ] **Recent Files History**
+  - Track last opened files in config
+  - Open Recent menu/screen
+
+### v0.13.2: Developer Experience
+- [ ] **Config Auto-Reload**
+  - Watch `config.ron` for changes
+  - Hot-reload theme and settings
+
 ## Next Development Phases 🚀
 
 ### Phase 1: File Loading Enhancement (Medium Priority)

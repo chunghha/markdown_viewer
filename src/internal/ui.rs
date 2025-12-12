@@ -120,7 +120,7 @@ pub fn render_help_overlay(
                 .flex()
                 .items_center()
                 .justify_center()
-                .child(help_panel(theme_colors)),
+                .child(help_panel(theme_colors, viewer.help_page)),
         ),
         false => None,
     }

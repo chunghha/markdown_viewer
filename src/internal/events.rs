@@ -240,9 +240,35 @@ pub fn handle_key_down(
         return;
     }
 
-    // Handle Escape to close help overlay
+    // Handle Help Overlay navigation (Left/Right arrows)
+    if viewer.show_help {
+        match event.keystroke.key.as_str() {
+            "right" => {
+                // Next page (max 1 for now)
+                viewer.help_page = (viewer.help_page + 1).min(1);
+                cx.notify();
+                return;
+            }
+            "left" => {
+                // Previous page
+                viewer.help_page = viewer.help_page.saturating_sub(1);
+                cx.notify();
+                return;
+            }
+            "escape" => {
+                viewer.show_help = false;
+                viewer.help_page = 0; // Reset to first page
+                cx.notify();
+                return;
+            }
+            _ => {}
+        }
+    }
+
+    // Handle Escape to close help overlay (fallback if above match didn't catch it)
     if viewer.show_help && event.keystroke.key.as_str() == "escape" {
         viewer.show_help = false;
+        viewer.help_page = 0;
         cx.notify();
         return;
     }
@@ -305,22 +331,57 @@ pub fn handle_key_down(
         }
     }
 
+    // v0.12.5: Handle Mark Mode (Set/Jump)
+    if let Some(mode) = viewer.mark_mode.clone() {
+        if let Some(char) = event.keystroke.key.chars().next() {
+            // Only accept single characters for marks
+            match mode {
+                crate::internal::viewer::MarkMode::Set => {
+                    debug!("Set mark '{}' at {}", char, viewer.scroll_state.scroll_y);
+                    viewer.marks.insert(char, viewer.scroll_state.scroll_y);
+                    info!("Mark '{}' set", char);
+                }
+                crate::internal::viewer::MarkMode::Jump => {
+                    match viewer.marks.get(&char) {
+                        Some(&y) => {
+                            debug!("Jump to mark '{}' at {}", char, y);
+                            viewer.scroll_state.scroll_y = y;
+                            // Clamp scroll
+                            viewer.scroll_state.reclamp();
+                        }
+                        None => {
+                            debug!("Mark '{}' not set", char);
+                            info!("Mark '{}' not set", char);
+                        }
+                    }
+                }
+            }
+        }
+        // Always exit mark mode after one key (or if key was not a char)
+        viewer.mark_mode = None;
+        cx.notify();
+        return;
+    }
+
     // Vi-style navigation (j/k for down/up) - only when not in input modes
     if viewer.search_state.is_none() && !viewer.show_goto_line {
         match event.keystroke.key.as_str() {
             "j" => {
+                viewer.z_pressed_once = false; // Reset z state
                 debug!("Vi-style: j (scroll down)");
                 viewer.scroll_state.scroll_down(arrow_increment);
                 cx.notify();
                 return;
             }
             "k" => {
+                viewer.z_pressed_once = false; // Reset z state
                 debug!("Vi-style: k (scroll up)");
                 viewer.scroll_state.scroll_up(arrow_increment);
                 cx.notify();
                 return;
             }
             "g" => {
+                viewer.z_pressed_once = false; // Reset z state
                 if event.keystroke.modifiers.shift {
                     debug!("Vi-style: G (scroll to bottom)");
                     viewer.scroll_state.scroll_to_bottom();
@@ -336,7 +397,69 @@ pub fn handle_key_down(
                 cx.quit();
                 return;
             }
-            _ => {}
+            "d" if event.keystroke.modifiers.control => {
+                viewer.z_pressed_once = false;
+                debug!("Half-page down (Ctrl+d)");
+                viewer
+                    .scroll_state
+                    .scroll_down(viewer.viewport_height * 0.5);
+                cx.notify();
+                return;
+            }
+            "u" if event.keystroke.modifiers.control => {
+                viewer.z_pressed_once = false;
+                debug!("Half-page up (Ctrl+u)");
+                viewer.scroll_state.scroll_up(viewer.viewport_height * 0.5);
+                cx.notify();
+                return;
+            }
+            "z" => {
+                if viewer.z_pressed_once {
+                    // Second 'z' -> zz command (center view)
+                    debug!("Center view (zz)");
+                    let _center_y = viewer.scroll_state.scroll_y + (viewer.viewport_height / 2.0);
+                    // This is simple centering. For more advanced "current line" centering:
+                    // We'd need to approximate which line is "current".
+                    // But effectively scroll_y IS the top line, so we want that top line to be in the middle?
+                    // "zz: Redraw, with the line containing the cursor at the center of the window."
+                    // Since we don't have a cursor, we treat the top visible line as the "current line".
+                    // So we want the current scroll_y position to move to viewport_height/2.
+                    // But wait, scroll_y determines what is at the top.
+                    // If we want the content currently at TOP to be at CENTER, we need to scroll UP.
+                    // New Scroll Y = Old Scroll Y - (Viewport / 2)
+                    let target = viewer.scroll_state.scroll_y - (viewer.viewport_height / 2.0);
+                    viewer.scroll_state.scroll_y = target.max(0.0);
+
+                    viewer.z_pressed_once = false;
+                    info!("Centered view");
+                } else {
+                    // First 'z'
+                    viewer.z_pressed_once = true;
+                    // TODO: Set a timer to clear this state? For now relying on other keys to clear.
+                }
+                cx.notify();
+                return;
+            }
+            "m" => {
+                viewer.z_pressed_once = false;
+                debug!("Mark set mode (m)");
+                viewer.mark_mode = Some(crate::internal::viewer::MarkMode::Set);
+                cx.notify();
+                return;
+            }
+            "'" => {
+                viewer.z_pressed_once = false;
+                debug!("Mark jump mode (')");
+                viewer.mark_mode = Some(crate::internal::viewer::MarkMode::Jump);
+                cx.notify();
+                return;
+            }
+            _ => {
+                // Any other key resets z state
+                if viewer.z_pressed_once {
+                    viewer.z_pressed_once = false;
+                }
+            }
         }
     }
 

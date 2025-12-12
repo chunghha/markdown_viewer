@@ -42,9 +42,14 @@ A desktop Markdown viewer built with Rust and GPUI, featuring advanced scrolling
 - **Search Navigation**: `Enter` (next), `Shift+Enter` (previous)
 - **Exit Search**: `Escape` to clear search and return to document
 - **Go to Line**: `Cmd+G` (macOS) or `Ctrl+G` to open go-to-line dialog, then enter line number and press `Enter`
-- **Quick Navigation**: `Cmd+T` (Top), `Cmd+B` (Bottom)
-- **Application**: `Cmd+Q` to quit
-- **Toggle Help Overlay**: `Cmd+H` to toggle help overlay for showing shortcuts
+- **Quick Navigation**: `Cmd+T` / `g` (Top), `Cmd+B` / `G` (Bottom)
+- **Advanced Navigation**:
+  - `Ctrl+d` / `Ctrl+u`: Half-page scroll down/up
+  - `zz`: Center current view
+  - `m<char>`: Set mark (e.g., `ma`)
+  - `'<char>`: Jump to mark (e.g., `'a`)
+- **Application**: `Cmd+Q` / `q` / `Ctrl+C` to quit
+- **Toggle Help Overlay**: `Cmd+H` to toggle help overlay for showing shortcuts (Arrow keys for multiple pages)
 - **Toggle TOC**: `Cmd+Z` to toggle Table of Contents sidebar
 - **Toggle Theme**: `Cmd+Shift+T` to toggle between Light and Dark themes
 - **Cycle Theme Family**: `Cmd+Shift+N` to cycle through available theme families

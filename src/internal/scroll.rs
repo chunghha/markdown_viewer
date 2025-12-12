@@ -77,6 +77,11 @@ impl ScrollState {
         self.scroll_y = self.scroll_y.min(self.max_scroll_y);
     }
 
+    /// Re-clamp the current scroll position to valid bounds
+    pub fn reclamp(&mut self) {
+        self.scroll_y = self.scroll_y.max(0.0).min(self.max_scroll_y);
+    }
+
     /// Smooth scroll to a target position
     pub fn smooth_scroll_to(&mut self, target: f32) {
         self.target_scroll_y = target.clamp(0.0, self.max_scroll_y);
