@@ -536,3 +536,128 @@ pub fn render_search_history_notification(
             .child(format!("ℹ {} (Click to dismiss)", message))
     })
 }
+
+pub fn render_file_finder(
+    viewer: &MarkdownViewer,
+    theme_colors: &crate::internal::theme::ThemeColors,
+    cx: &mut gpui::Context<MarkdownViewer>,
+) -> Option<impl IntoElement> {
+    if !viewer.show_file_finder {
+        return None;
+    }
+
+    let query = viewer.finder_query.clone();
+
+    let list_items = viewer
+        .finder_matches
+        .iter()
+        .enumerate()
+        .map(|(idx, (_, path))| {
+            let is_selected = idx == viewer.finder_selected_index;
+            let path_str = path.to_string_lossy().to_string();
+            let path_clone = path.clone();
+
+            div()
+                .flex()
+                .px_2()
+                .py_1()
+                .w_full()
+                .rounded_sm()
+                .cursor_pointer()
+                .bg(match is_selected {
+                    true => theme_colors.toc_active_color,
+                    false => gpui::transparent_black().into(),
+                })
+                .hover(|style| style.bg(theme_colors.toc_hover_color))
+                .on_mouse_down(
+                    gpui::MouseButton::Left,
+                    cx.listener(move |this, _, _, cx| {
+                        this.load_file(path_clone.clone(), cx);
+                    }),
+                )
+                .child(div().text_color(theme_colors.text_color).child(path_str))
+        })
+        .collect::<Vec<_>>();
+
+    Some(
+        div()
+            .absolute()
+            .top_0()
+            .left_0()
+            .right_0()
+            .bottom_0()
+            .bg(gpui::rgba(0x00000080)) // Dim background
+            .flex()
+            .items_start()
+            .justify_center()
+            .pt(px(100.0))
+            .child(
+                div()
+                    .w(px(600.0))
+                    .bg(theme_colors.bg_color)
+                    .border_1()
+                    .border_color(theme_colors.toc_border_color)
+                    .shadow_xl()
+                    .rounded_xl()
+                    .overflow_hidden()
+                    .child(
+                        div()
+                            .flex_col()
+                            .child(
+                                // Input area
+                                div()
+                                    .p_4()
+                                    .border_b_1()
+                                    .border_color(theme_colors.toc_border_color)
+                                    .child(
+                                        div()
+                                            .flex()
+                                            .items_center()
+                                            .gap_2()
+                                            .child(
+                                                div()
+                                                    .text_color(theme_colors.text_color)
+                                                    .opacity(0.7)
+                                                    .child("Go to file:"),
+                                            )
+                                            .child(
+                                                div()
+                                                    .text_color(theme_colors.text_color)
+                                                    .font_weight(FontWeight::BOLD)
+                                                    .child(format!("{}█", query)),
+                                            ),
+                                    ),
+                            )
+                            .child(
+                                // Results list
+                                div()
+                                    .flex_col()
+                                    // Use overflow_hidden instead of missing overflow_y_scroll
+                                    // since we capped results at 20, we can just show them all for now
+                                    // or wraps in a scrollable container if GPUI supports it differently.
+                                    // Given the error, we'll avoid the method call and rely on max height.
+                                    .max_h(px(400.0))
+                                    .overflow_hidden()
+                                    .p_2()
+                                    .children(list_items),
+                            )
+                            .child(
+                                // Footer
+                                div()
+                                    .px_4()
+                                    .py_2()
+                                    .bg(theme_colors.toc_bg_color)
+                                    .border_t_1()
+                                    .border_color(theme_colors.toc_border_color)
+                                    .flex()
+                                    .justify_between()
+                                    .text_xs()
+                                    .text_color(theme_colors.text_color)
+                                    .opacity(0.7)
+                                    .child("Use Up/Down to navigate, Enter to select, Esc to close")
+                                    .child(format!("{} files", viewer.all_files.len())),
+                            ),
+                    ),
+            ),
+    )
+}

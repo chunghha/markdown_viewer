@@ -47,9 +47,11 @@ The core infrastructure has been **fully implemented and tested**. The applicati
   - [x] Help Button toggle
 
 ### v0.13.0: File Management
-- [ ] **Fuzzy File Finder**
-  - File picker overlay (`Cmd+P` / `Space f`)
-  - List files in current directory and subdirectories
+- [x] **v0.13.0: Fuzzy File Finder**
+    - [x] `Cmd+P` overlay to fuzzy search files in current directory
+    - [x] Use `walkdir` and `fuzzy-matcher` crates
+    - [x] Open selected file in current view, resetting scroll/search statest opened files in config
+  - Open Recent menu/screen
 
 ### v0.13.1: Usability
 - [ ] **Recent Files History**

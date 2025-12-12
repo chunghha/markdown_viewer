@@ -24,6 +24,72 @@ pub fn handle_key_down(
         event.keystroke.modifiers.alt
     );
 
+    // Fuzzy File Finder Shortcuts
+    if viewer.show_file_finder {
+        match event.keystroke.key.as_str() {
+            "escape" => {
+                viewer.show_file_finder = false;
+                viewer.finder_query.clear();
+                cx.notify();
+                return;
+            }
+            "up" => {
+                viewer.finder_selected_index = viewer.finder_selected_index.saturating_sub(1);
+                cx.notify();
+                return;
+            }
+            "down" => {
+                if !viewer.finder_matches.is_empty() {
+                    viewer.finder_selected_index =
+                        (viewer.finder_selected_index + 1).min(viewer.finder_matches.len() - 1);
+                }
+                cx.notify();
+                return;
+            }
+            "enter" => {
+                if let Some((_, path)) = viewer
+                    .finder_matches
+                    .get(viewer.finder_selected_index)
+                    .cloned()
+                {
+                    viewer.load_file(path, cx);
+                }
+                cx.notify();
+                return;
+            }
+            "backspace" => {
+                viewer.finder_query.pop();
+                viewer.update_finder_matches();
+                cx.notify();
+                return;
+            }
+            key => {
+                // If it's a character content, append to query
+                if !event.keystroke.modifiers.platform
+                    && !event.keystroke.modifiers.control
+                    && !event.keystroke.modifiers.alt
+                    && key.len() == 1
+                {
+                    viewer.finder_query.push_str(key);
+                    viewer.update_finder_matches();
+                    cx.notify();
+                    return;
+                }
+            }
+        }
+        // Consume all other keys while finder is open
+        return;
+    }
+
+    // Global shortcut to open finder (Cmd+P)
+    if event.keystroke.modifiers.platform && event.keystroke.key == "p" {
+        debug!("Toggle Fuzzy File Finder (Cmd+P)");
+        viewer.show_file_finder = true;
+        viewer.refresh_file_list();
+        cx.notify();
+        return;
+    }
+
     // Check for Cmd+F (macOS) or Ctrl+F (other platforms) to toggle search
     if event.keystroke.key.as_str() == "f"
         && (event.keystroke.modifiers.platform || event.keystroke.modifiers.control)

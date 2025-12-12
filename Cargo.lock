@@ -2286,6 +2286,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "fuzzy-matcher"
+version = "0.3.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "54614a3312934d066701a80f20f15fa3b56d67ac7722b39eea5b4c9dd1d66c94"
+dependencies = [
+ "thread_local",
+]
+
+[[package]]
 name = "generic-array"
 version = "0.14.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3622,11 +3631,12 @@ dependencies = [
 
 [[package]]
 name = "markdown_viewer"
-version = "0.12.6"
+version = "0.13.0"
 dependencies = [
  "anyhow",
  "clap",
  "comrak",
+ "fuzzy-matcher",
  "gpui",
  "image",
  "markdown2pdf",
@@ -3643,6 +3653,7 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "usvg",
+ "walkdir",
 ]
 
 [[package]]

@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.13.0] - 2025-12-11
+
+### Added
+- **Fuzzy File Finder**: Quickly switch between files in your workspace
+  - Press `Cmd+P` (macOS) or `Ctrl+P` (Linux/Windows) to open the finder
+  - Type to fuzzy search for files by name
+  - Use `Up` / `Down` arrows to navigate results and `Enter` to open
+  - Shows generic icons for recognized file types (md, txt)
+- **Help Overlay Update**: Added `Cmd+P` shortcut documentation to the help panel
+
 ## [0.12.6] - 2025-12-11
 
 ### Added

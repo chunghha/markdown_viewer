@@ -36,12 +36,17 @@ A desktop Markdown viewer built with Rust and GPUI, featuring advanced scrolling
   - Click headings to jump to sections
   - Auto-highlights current section
   - Precise navigation accounting for text wrapping and images
+- **v0.13.0: Fuzzy File Finder**
+  - **Quick Open**: Fuzzy search files in the current directory with `Cmd+P`
+  - **Fast Navigation**: Instant results using efficient fuzzy matching
+  - **Seamless Context Switching**: Opens files while preserving application state
 
 ### Keyboard Shortcuts
 - **Search**: `Cmd+F` (macOS) or `Ctrl+F` to toggle search
 - **Search Navigation**: `Enter` (next), `Shift+Enter` (previous)
 - **Exit Search**: `Escape` to clear search and return to document
-- **Go to Line**: `Cmd+G` (macOS) or `Ctrl+G` to open go-to-line dialog, then enter line number and press `Enter`
+- **Go to Line**: `Cmd+G` (macOS) or `Ctrl+G` to open go-to-line dialog
+- **Quick Open**: `Cmd+P` (macOS) or `Ctrl+P` to fuzzy find and open files
 - **Quick Navigation**: `Cmd+T` / `g` (Top), `Cmd+B` / `G` (Bottom)
 - **Advanced Navigation**:
   - `Ctrl+d` / `Ctrl+u`: Half-page scroll down/up

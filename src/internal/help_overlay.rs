@@ -57,6 +57,7 @@ pub fn help_panel(
                     .child(shortcut_row("Cmd + H", "Toggle Help"))
                     .child(shortcut_row("Cmd + Z", "Toggle TOC"))
                     .child(shortcut_row("Cmd + F", "Search (Up/Down for History)"))
+                    .child(shortcut_row("Cmd + P", "Go to File"))
                     .child(shortcut_row("Cmd + Shift + H", "Clear Search History"))
                     .child(shortcut_row("Cmd + G", "Go to Line"))
                     .child(shortcut_row("Cmd + E", "Export to PDF"))

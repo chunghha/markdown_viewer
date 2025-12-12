@@ -1,4 +1,5 @@
 use comrak::{Arena, Options, parse_document};
+use fuzzy_matcher::{FuzzyMatcher, skim::SkimMatcherV2};
 use gpui::{
     AsyncWindowContext, Context, FocusHandle, ImageSource, IntoElement, Render, RenderImage,
     WeakEntity, Window, actions, div, prelude::*, px,
@@ -9,6 +10,7 @@ use std::path::PathBuf;
 use std::sync::{Arc, mpsc::Receiver};
 use tokio::runtime::Runtime;
 use tracing::{debug, info, warn};
+use walkdir::WalkDir;
 
 use crate::config::AppConfig;
 use crate::internal::events;
@@ -134,6 +136,18 @@ pub struct MarkdownViewer {
     pub z_pressed_once: bool,
     /// v0.12.5: Current help overlay page (0 = General, 1 = Navigation)
     pub help_page: usize,
+    /// v0.13.0: Whether to show the file finder overlay
+    pub show_file_finder: bool,
+    /// v0.13.0: Current file finder query
+    pub finder_query: String,
+    /// v0.13.0: All files found in the current directory (cached)
+    pub all_files: Vec<PathBuf>,
+    /// v0.13.0: Filtered and sorted matches (score, path)
+    pub finder_matches: Vec<(i64, PathBuf)>,
+    /// v0.13.0: Currently selected index in the finder list
+    pub finder_selected_index: usize,
+    /// v0.13.0: Fuzzy matcher instance
+    pub matcher: SkimMatcherV2,
 }
 
 impl MarkdownViewer {
@@ -196,6 +210,12 @@ impl MarkdownViewer {
             mark_mode: None,
             z_pressed_once: false,
             help_page: 0,
+            show_file_finder: false,
+            finder_query: String::new(),
+            all_files: Vec::new(),
+            finder_matches: Vec::new(),
+            finder_selected_index: 0,
+            matcher: SkimMatcherV2::default(),
         };
 
         viewer.recompute_max_scroll();
@@ -219,6 +239,108 @@ impl MarkdownViewer {
         let toc_viewport_height = self.viewport_height;
 
         self.toc_max_scroll_y = (toc_content_height - toc_viewport_height).max(0.0);
+    }
+
+    /// Refresh the list of markdown files in the current directory (recursive)
+    pub fn refresh_file_list(&mut self) {
+        let mut files = Vec::new();
+        let current_dir = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+
+        // Scan for markdown files
+        for entry in WalkDir::new(&current_dir)
+            .into_iter()
+            .filter_map(|e| e.ok())
+        {
+            let path = entry.path();
+            if path.is_file()
+                && let Some("md" | "markdown" | "txt") = path.extension().and_then(|s| s.to_str())
+            {
+                // Store relative path if possible for cleaner UI
+                if let Ok(rel) = path.strip_prefix(&current_dir) {
+                    files.push(rel.to_path_buf());
+                } else {
+                    files.push(path.to_path_buf());
+                }
+            }
+        }
+        self.all_files = files;
+        self.update_finder_matches();
+    }
+
+    /// Update the fuzzy finder matches based on the current query
+    pub fn update_finder_matches(&mut self) {
+        self.finder_matches = match self.finder_query.is_empty() {
+            true => self
+                .all_files
+                .iter()
+                .map(|p| (0, p.clone()))
+                .take(20)
+                .collect(),
+            false => {
+                let mut matches: Vec<(i64, PathBuf)> = self
+                    .all_files
+                    .iter()
+                    .filter_map(|path| {
+                        let path_str = path.to_string_lossy();
+                        self.matcher
+                            .fuzzy_match(&path_str, &self.finder_query)
+                            .map(|score| (score, path.clone()))
+                    })
+                    .collect();
+
+                // Sort by score descending
+                matches.sort_by(|a, b| b.0.cmp(&a.0));
+                // Cap at 20 results for performance/UI
+                if matches.len() > 20 {
+                    matches.truncate(20);
+                }
+                matches
+            }
+        };
+        self.finder_selected_index = 0;
+    }
+
+    /// Load a new markdown file and reset viewer state
+    pub fn load_file(&mut self, path: PathBuf, cx: &mut Context<Self>) {
+        // Load content
+        let path_str = path.to_string_lossy().to_string();
+        match crate::internal::file_handling::load_markdown_content(&path_str) {
+            Ok(content) => {
+                self.markdown_file_path = path.clone();
+                self.markdown_content = content;
+
+                // Reset Scroll & State
+                self.scroll_state = ScrollState::new();
+                self.search_state = None;
+                self.search_input.clear();
+                self.search_history_index = None;
+                self.bookmarks.clear();
+                self.show_bookmarks = false;
+                self.show_goto_line = false;
+                self.goto_line_input.clear();
+                self.show_file_finder = false;
+                self.finder_query.clear();
+                self.show_help = false;
+                self.marks.clear();
+                self.mark_mode = None;
+
+                // Re-parse TOC
+                let arena = comrak::Arena::new();
+                let mut options = comrak::Options::default();
+                options.extension.table = true;
+                let root = comrak::parse_document(&arena, &self.markdown_content, &options);
+                self.toc = crate::internal::toc::TableOfContents::from_ast(root);
+
+                self.recompute_max_scroll();
+                self.compute_toc_max_scroll();
+
+                info!("Loaded file: {:?}", self.markdown_file_path);
+                cx.notify();
+            }
+            Err(e) => {
+                warn!("Failed to load file {:?}: {}", path, e);
+            }
+        }
     }
 
     // Calculate the estimated Y scroll position for a given byte offset
@@ -1086,6 +1208,12 @@ impl Render for MarkdownViewer {
 
         // Search History Notification Overlay
         let element = match ui::render_search_history_notification(self, theme_colors, cx) {
+            Some(overlay) => element.child(overlay),
+            None => element,
+        };
+
+        // Fuzzy File Finder Overlay
+        let element = match ui::render_file_finder(self, theme_colors, cx) {
             Some(overlay) => element.child(overlay),
             None => element,
         };
