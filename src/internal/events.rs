@@ -320,8 +320,31 @@ pub fn handle_key_down(
                 cx.notify();
                 return;
             }
+            "g" => {
+                if event.keystroke.modifiers.shift {
+                    debug!("Vi-style: G (scroll to bottom)");
+                    viewer.scroll_state.scroll_to_bottom();
+                } else {
+                    debug!("Vi-style: g (scroll to top)");
+                    viewer.scroll_state.scroll_to_top();
+                }
+                cx.notify();
+                return;
+            }
+            "q" => {
+                debug!("Quit application (q)");
+                cx.quit();
+                return;
+            }
             _ => {}
         }
+    }
+
+    // Check for Ctrl+C to quit (Global)
+    if event.keystroke.modifiers.control && event.keystroke.key.as_str() == "c" {
+        debug!("Quit application (Ctrl+C)");
+        cx.quit();
+        return;
     }
 
     // Handle search mode input
