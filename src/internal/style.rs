@@ -157,6 +157,23 @@ pub const LINE_HEIGHT_MULTIPLIER: f32 = 1.5;
 /// Accounts for headings, lists, blockquotes, and extra spacing
 pub const CONTENT_HEIGHT_BUFFER: f32 = 400.0;
 
+/// Character width multiplier for estimating text wrapping
+/// Used with base_text_size to approximate average character width
+/// Higher values = more conservative (more wrapped lines estimated)
+pub const CHAR_WIDTH_MULTIPLIER: f32 = 0.4;
+
+/// Minimal safety margin at bottom to account for any rendering variance
+pub const BOTTOM_SCROLL_PADDING: f32 = 120.0;
+
+/// Scaling multiplier applied to estimated content height
+/// Accounts for cumulative inter-element spacing not captured in per-line estimation
+/// 1.02 = 2% extra height to account for margins between paragraphs, lists, etc.
+pub const CONTENT_HEIGHT_SCALE: f32 = 1.02;
+
+/// Average vertical spacing per block element (paragraph, list, table, code block)
+/// Accounts for .mb_2(), .my_2(), .p_3() margins in rendering
+pub const BLOCK_ELEMENT_SPACING: f32 = 4.0;
+
 /// Default viewport height used when window dimensions are unavailable
 /// Default viewport height used when window dimensions are unavailable
 pub const DEFAULT_VIEWPORT_HEIGHT: f32 = 800.0;

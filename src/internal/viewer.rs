@@ -19,7 +19,10 @@ use crate::internal::image_loader::fetch_and_decode_image;
 use crate::internal::rendering::render_markdown_ast_with_search;
 use crate::internal::scroll::ScrollState;
 use crate::internal::search::SearchState;
-use crate::internal::style::{IMAGE_MAX_WIDTH, get_theme_colors};
+use crate::internal::style::{
+    BLOCK_ELEMENT_SPACING, BOTTOM_SCROLL_PADDING, CHAR_WIDTH_MULTIPLIER, CONTENT_HEIGHT_SCALE,
+    IMAGE_MAX_WIDTH, get_theme_colors,
+};
 use crate::internal::ui;
 
 // Define search actions
@@ -266,7 +269,7 @@ impl MarkdownViewer {
 
     /// Calculate the Y position for a specific line number
     pub fn calculate_y_for_line(&self, line_number: usize) -> f32 {
-        let (height, _) = self.calculate_smart_height(Some(line_number));
+        let (height, _, _) = self.calculate_smart_height(Some(line_number));
         // Add top padding
         height + 32.0 // CONTAINER_PADDING
     }
@@ -458,11 +461,11 @@ impl MarkdownViewer {
 
     /// Calculates the height of the content using smart logic (wrapping, images, etc.)
     /// If stop_at_line is Some(n), returns the height up to the start of line n.
-    /// Returns (height, found_image_paths)
+    /// Returns (height, found_image_paths, block_element_count)
     fn calculate_smart_height(
         &self,
         stop_at_line: Option<usize>,
-    ) -> (f32, std::collections::HashSet<String>) {
+    ) -> (f32, std::collections::HashSet<String>, usize) {
         let avg_line_height =
             self.config.theme.base_text_size * self.config.theme.line_height_multiplier;
 
@@ -480,11 +483,14 @@ impl MarkdownViewer {
             true => self.viewport_width - crate::internal::style::TOC_WIDTH - 64.0,
             false => self.viewport_width - 64.0,
         };
-        let char_width = self.config.theme.base_text_size * 0.35;
+        // Use conservative multiplier for variable-width fonts
+        let char_width = self.config.theme.base_text_size * CHAR_WIDTH_MULTIPLIER;
         let chars_per_line = (effective_width / char_width).max(20.0);
 
         let mut smart_text_height = 0.0;
         let mut found_image_paths = std::collections::HashSet::new();
+        let mut block_element_count: usize = 0;
+        let mut prev_line_empty = true; // Track paragraph boundaries
 
         for (idx, raw_line) in self.markdown_content.lines().enumerate() {
             if stop_at_line.is_some_and(|stop_idx| idx >= stop_idx) {
@@ -496,6 +502,10 @@ impl MarkdownViewer {
             // Toggle fenced code block state
             if line.starts_with("```") {
                 in_fenced_code = !in_fenced_code;
+                if !in_fenced_code {
+                    // End of code block = one block element
+                    block_element_count += 1;
+                }
                 smart_text_height += avg_line_height * code_line_weight;
                 continue;
             }
@@ -547,7 +557,25 @@ impl MarkdownViewer {
 
             if found_image {
                 smart_text_height += image_height_on_line;
+                block_element_count += 1; // Images are block elements
             }
+
+            // Count block elements: paragraphs (text after empty line), tables, lists
+            let is_table_line = line.starts_with('|');
+            let is_list_line = line.starts_with('-')
+                || line.starts_with('*')
+                || line.starts_with('+')
+                || (line.chars().next().is_some_and(|c| c.is_ascii_digit()) && line.contains(". "));
+            let is_heading = line.starts_with('#');
+
+            if is_table_line || is_heading {
+                block_element_count += 1;
+            } else if !line.is_empty() && prev_line_empty && !is_list_line {
+                // New paragraph (non-empty line after empty line)
+                block_element_count += 1;
+            }
+
+            prev_line_empty = line.is_empty();
 
             let weight = match () {
                 _ if line.starts_with('#') => heading_weight,
@@ -582,7 +610,7 @@ impl MarkdownViewer {
             smart_text_height += visual_lines * avg_line_height * weight;
         }
 
-        (smart_text_height, found_image_paths)
+        (smart_text_height, found_image_paths, block_element_count)
     }
 
     pub fn recompute_max_scroll(&mut self) {
@@ -590,9 +618,11 @@ impl MarkdownViewer {
             self.config.theme.base_text_size * self.config.theme.line_height_multiplier;
 
         // --- Smart Logic (Current) ---
-        let (smart_text_height, found_image_paths) = self.calculate_smart_height(None);
+        let (smart_text_height, found_image_paths, block_count) = self.calculate_smart_height(None);
 
-        let smart_total_height = smart_text_height;
+        // Apply percentage-based scaling + block element spacing
+        let smart_total_height = (smart_text_height * CONTENT_HEIGHT_SCALE)
+            + (block_count as f32 * BLOCK_ELEMENT_SPACING);
 
         // --- Legacy Logic (Old) ---
         // Simple line counts + sum of all loaded images
@@ -667,19 +697,21 @@ impl MarkdownViewer {
         // Ideally, we should have a single unified logic that handles all cases perfectly.
 
         debug!(
-            "Scroll calculation: smart={:.1}px, legacy={:.1}px, images={}/{} loaded, unloaded_buffer={:.1}px, using={:.1}px",
+            "Scroll calculation: smart={:.1}px (scaled), legacy={:.1}px, blocks={}, images={}/{} loaded, unloaded_buffer={:.1}px",
             smart_total_height,
             legacy_total_height,
+            block_count,
             loaded_images_count,
             total_images_found,
-            unloaded_image_buffer,
-            f32::max(smart_total_height, legacy_total_height)
+            unloaded_image_buffer
         );
 
+        // Content height = max(smart, legacy) + container padding + image buffer + safety margin
+        // Note: smart_total_height already includes scaling (8%) and block element spacing
         let content_height = f32::max(smart_total_height, legacy_total_height)
             + CONTAINER_PADDING
-            + self.config.theme.content_height_buffer
-            + unloaded_image_buffer;
+            + unloaded_image_buffer
+            + BOTTOM_SCROLL_PADDING;
 
         self.scroll_state
             .set_max_scroll(content_height, self.viewport_height);
