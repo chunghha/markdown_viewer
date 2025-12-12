@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.13.1] - 2025-12-12
+
+### Added
+- **Recent Files History**: Quickly access previously opened files
+  - Press `Cmd+Shift+O` to open the recent files list
+  - Automatically tracks files as you open them
+  - Persists history across application restarts
+- **Zoom Shortcuts**: Added `Cmd++` / `Cmd+-` shortcuts to help overlay documentation
+- **Documentation**: Updated help overlay with correct shortcuts and labels
+
 ## [0.13.0] - 2025-12-11
 
 ### Added

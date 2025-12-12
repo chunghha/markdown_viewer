@@ -40,6 +40,10 @@ A desktop Markdown viewer built with Rust and GPUI, featuring advanced scrolling
   - **Quick Open**: Fuzzy search files in the current directory with `Cmd+P`
   - **Fast Navigation**: Instant results using efficient fuzzy matching
   - **Seamless Context Switching**: Opens files while preserving application state
+- **v0.13.1: Recent Files History**
+  - **Open Recent**: Track and quickly reopen recently accessed files with `Cmd+Shift+O`
+  - **Smart Tracking**: Automatically remembers files you open
+  - **Persistence**: recent files list kept between sessions
 
 ### Keyboard Shortcuts
 - **Search**: `Cmd+F` (macOS) or `Ctrl+F` to toggle search
@@ -47,6 +51,7 @@ A desktop Markdown viewer built with Rust and GPUI, featuring advanced scrolling
 - **Exit Search**: `Escape` to clear search and return to document
 - **Go to Line**: `Cmd+G` (macOS) or `Ctrl+G` to open go-to-line dialog
 - **Quick Open**: `Cmd+P` (macOS) or `Ctrl+P` to fuzzy find and open files
+- **Open Recent**: `Cmd+Shift+O` (macOS) or `Ctrl+Shift+O` to open recent files list
 - **Quick Navigation**: `Cmd+T` / `g` (Top), `Cmd+B` / `G` (Bottom)
 - **Advanced Navigation**:
   - `Ctrl+d` / `Ctrl+u`: Half-page scroll down/up

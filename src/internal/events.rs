@@ -85,6 +85,20 @@ pub fn handle_key_down(
     if event.keystroke.modifiers.platform && event.keystroke.key == "p" {
         debug!("Toggle Fuzzy File Finder (Cmd+P)");
         viewer.show_file_finder = true;
+        viewer.finder_mode = crate::internal::viewer::FinderMode::AllFiles;
+        viewer.refresh_file_list();
+        cx.notify();
+        return;
+    }
+
+    // Global shortcut to open recent files (Cmd+Shift+O)
+    if event.keystroke.modifiers.platform
+        && event.keystroke.modifiers.shift
+        && event.keystroke.key == "o"
+    {
+        debug!("Toggle Recent Files (Cmd+Shift+O)");
+        viewer.show_file_finder = true;
+        viewer.finder_mode = crate::internal::viewer::FinderMode::RecentFiles;
         viewer.refresh_file_list();
         cx.notify();
         return;

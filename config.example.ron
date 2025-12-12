@@ -90,4 +90,10 @@
     
     // Maximum number of search history items to keep
     max_history_items: 20,
+
+    // Recent files history
+    recent_files: [],
+
+    // Maximum number of recent files to keep
+    max_recent_files: 10,
 )

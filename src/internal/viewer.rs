@@ -148,6 +148,14 @@ pub struct MarkdownViewer {
     pub finder_selected_index: usize,
     /// v0.13.0: Fuzzy matcher instance
     pub matcher: SkimMatcherV2,
+    /// v0.13.1: Current mode of the file finder
+    pub finder_mode: FinderMode,
+}
+
+#[derive(Debug, Clone, PartialEq, Copy)]
+pub enum FinderMode {
+    AllFiles,
+    RecentFiles,
 }
 
 impl MarkdownViewer {
@@ -216,6 +224,7 @@ impl MarkdownViewer {
             finder_matches: Vec::new(),
             finder_selected_index: 0,
             matcher: SkimMatcherV2::default(),
+            finder_mode: FinderMode::AllFiles,
         };
 
         viewer.recompute_max_scroll();
@@ -241,25 +250,34 @@ impl MarkdownViewer {
         self.toc_max_scroll_y = (toc_content_height - toc_viewport_height).max(0.0);
     }
 
-    /// Refresh the list of markdown files in the current directory (recursive)
+    /// Refresh the list of markdown files based on current mode
     pub fn refresh_file_list(&mut self) {
         let mut files = Vec::new();
-        let current_dir = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
 
-        // Scan for markdown files
-        for entry in WalkDir::new(&current_dir)
-            .into_iter()
-            .filter_map(|e| e.ok())
-        {
-            let path = entry.path();
-            if path.is_file()
-                && let Some("md" | "markdown" | "txt") = path.extension().and_then(|s| s.to_str())
-            {
-                // Store relative path if possible for cleaner UI
-                if let Ok(rel) = path.strip_prefix(&current_dir) {
-                    files.push(rel.to_path_buf());
-                } else {
-                    files.push(path.to_path_buf());
+        match self.finder_mode {
+            FinderMode::RecentFiles => {
+                for path_str in &self.config.recent_files {
+                    files.push(PathBuf::from(path_str));
+                }
+            }
+            FinderMode::AllFiles => {
+                let current_dir = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+                // Scan for markdown files
+                for entry in WalkDir::new(&current_dir)
+                    .into_iter()
+                    .filter_map(|e| e.ok())
+                {
+                    let path = entry.path();
+                    if path.is_file()
+                        && let Some("md" | "markdown" | "txt") =
+                            path.extension().and_then(|s| s.to_str())
+                    {
+                        // Store relative path if possible for cleaner UI
+                        match path.strip_prefix(&current_dir) {
+                            Ok(rel) => files.push(rel.to_path_buf()),
+                            Err(_) => files.push(path.to_path_buf()),
+                        }
+                    }
                 }
             }
         }
@@ -308,6 +326,21 @@ impl MarkdownViewer {
             Ok(content) => {
                 self.markdown_file_path = path.clone();
                 self.markdown_content = content;
+
+                // Update recent files
+                if let Some(pos) = self.config.recent_files.iter().position(|r| r == &path_str) {
+                    self.config.recent_files.remove(pos);
+                }
+                self.config.recent_files.insert(0, path_str.clone());
+                if self.config.recent_files.len() > self.config.max_recent_files {
+                    self.config
+                        .recent_files
+                        .truncate(self.config.max_recent_files);
+                }
+                // Save config
+                if let Err(e) = self.config.save_to_file("config.ron") {
+                    warn!("Failed to save recent files to config: {}", e);
+                }
 
                 // Reset Scroll & State
                 self.scroll_state = ScrollState::new();

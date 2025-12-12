@@ -58,11 +58,15 @@ pub fn help_panel(
                     .child(shortcut_row("Cmd + Z", "Toggle TOC"))
                     .child(shortcut_row("Cmd + F", "Search (Up/Down for History)"))
                     .child(shortcut_row("Cmd + P", "Go to File"))
+                    .child(shortcut_row("Cmd + Shift + O", "Open Recent"))
                     .child(shortcut_row("Cmd + Shift + H", "Clear Search History"))
                     .child(shortcut_row("Cmd + G", "Go to Line"))
                     .child(shortcut_row("Cmd + E", "Export to PDF"))
                     .child(shortcut_row("Cmd + Shift + T", "Toggle Theme"))
                     .child(shortcut_row("Cmd + Shift + N", "Cycle Theme Family"))
+                    .child(shortcut_row("Cmd + D", "Toggle Bookmark"))
+                    .child(shortcut_row("Cmd + Shift + B", "View Bookmarks"))
+                    .child(shortcut_row("Cmd + + / -", "Zoom In / Out"))
                     .child(shortcut_row("Esc", "Close Overlay / Search")),
             )
             .child(
@@ -87,7 +91,7 @@ pub fn help_panel(
                     .gap_2()
                     .child(shortcut_row("j / k", "Scroll Down / Up"))
                     .child(shortcut_row("Arrow keys", "Scroll limit"))
-                    .child(shortcut_row("Cmd + D / U", "Half-Page Down / Up"))
+                    .child(shortcut_row("Ctrl + D / U", "Half-Page Down / Up"))
                     .child(shortcut_row("PageUp / Down", "Page Scroll"))
                     .child(shortcut_row("Space (+Shift)", "Page Scroll"))
                     .child(shortcut_row("g", "Scroll to Top"))
@@ -95,9 +99,7 @@ pub fn help_panel(
                     .child(shortcut_row("Cmd + T / B", "Scroll to Top / Bottom"))
                     .child(shortcut_row("zz", "Center View"))
                     .child(shortcut_row("m + <char>", "Set Mark"))
-                    .child(shortcut_row("' + <char>", "Jump to Mark"))
-                    .child(shortcut_row("Cmd + D", "Toggle Bookmark"))
-                    .child(shortcut_row("Cmd + Shift + B", "View Bookmarks")),
+                    .child(shortcut_row("' + <char>", "Jump to Mark")),
             )
             .child(
                 div()

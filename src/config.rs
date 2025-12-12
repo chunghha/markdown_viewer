@@ -38,10 +38,22 @@ pub struct AppConfig {
     /// Maximum number of search history items to keep
     #[serde(default = "default_max_history_items")]
     pub max_history_items: usize,
+
+    /// Recent files history
+    #[serde(default)]
+    pub recent_files: Vec<String>,
+
+    /// Maximum number of recent files to keep
+    #[serde(default = "default_max_recent_files")]
+    pub max_recent_files: usize,
 }
 
 fn default_max_history_items() -> usize {
     20
+}
+
+fn default_max_recent_files() -> usize {
+    10
 }
 
 /// Window configuration
@@ -520,6 +532,22 @@ mod tests {
 
         let loaded = AppConfig::load_from_file(path).expect("Failed to load config");
         assert!(loaded.search_history.is_empty());
+
+        fs::remove_file(path).ok();
+    }
+
+    #[test]
+    fn test_recent_files_config() {
+        let mut config = AppConfig::default();
+        config.recent_files = vec!["/path/to/a.md".to_string(), "/path/to/b.md".to_string()];
+        config.max_recent_files = 5;
+
+        let path = "test_config_recent_files.ron";
+        config.save_to_file(path).expect("Failed to save config");
+
+        let loaded = AppConfig::load_from_file(path).expect("Failed to load config");
+        assert_eq!(loaded.recent_files, vec!["/path/to/a.md", "/path/to/b.md"]);
+        assert_eq!(loaded.max_recent_files, 5);
 
         fs::remove_file(path).ok();
     }

@@ -618,7 +618,10 @@ pub fn render_file_finder(
                                                 div()
                                                     .text_color(theme_colors.text_color)
                                                     .opacity(0.7)
-                                                    .child("Go to file:"),
+                                                    .child(match viewer.finder_mode {
+                                                        crate::internal::viewer::FinderMode::AllFiles => "Go to file:",
+                                                        crate::internal::viewer::FinderMode::RecentFiles => "Open Recent:",
+                                                    }),
                                             )
                                             .child(
                                                 div()

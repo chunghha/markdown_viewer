@@ -54,9 +54,9 @@ The core infrastructure has been **fully implemented and tested**. The applicati
   - Open Recent menu/screen
 
 ### v0.13.1: Usability
-- [ ] **Recent Files History**
-  - Track last opened files in config
-  - Open Recent menu/screen
+- [x] **Recent Files History**
+  - [x] Track last opened files in config
+  - [x] Open Recent menu/screen
 
 ### v0.13.2: Developer Experience
 - [ ] **Config Auto-Reload**
