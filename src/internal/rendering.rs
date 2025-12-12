@@ -723,7 +723,7 @@ fn render_table_row<'a, T: 'static>(
         .flex()
         .w_full()
         .border_b_1()
-        .border_color(TABLE_BORDER_COLOR);
+        .border_color(theme_colors.table_border_color);
 
     if is_header {
         row_div = row_div
@@ -732,6 +732,7 @@ fn render_table_row<'a, T: 'static>(
     }
 
     // Render cells with alignment and calculated width
+    let cell_count = row_node.children().count();
     let cells: Vec<AnyElement> = row_node
         .children()
         .enumerate()
@@ -740,6 +741,7 @@ fn render_table_row<'a, T: 'static>(
                 cell,
                 alignments.get(idx),
                 column_width,
+                idx == cell_count - 1, // is_last_cell
                 markdown_file_path,
                 search_state,
                 viewport_width,
@@ -760,6 +762,7 @@ fn render_table_cell<'a, T: 'static>(
     cell_node: &'a AstNode<'a>,
     alignment: Option<&comrak::nodes::TableAlignment>,
     column_width: f32,
+    is_last_cell: bool,
     markdown_file_path: Option<&Path>,
     search_state: Option<&super::search::SearchState>,
     viewport_width: f32,
@@ -774,10 +777,15 @@ fn render_table_cell<'a, T: 'static>(
         .w(px(column_width))
         .min_w(px(MIN_COLUMN_WIDTH))
         .p(px(TABLE_CELL_PADDING))
-        .border_r_1()
-        .border_color(TABLE_BORDER_COLOR)
         .flex_shrink_0()
         .overflow_hidden();
+
+    // Add right border only if not the last cell
+    if !is_last_cell {
+        cell_div = cell_div
+            .border_r_1()
+            .border_color(theme_colors.table_border_color);
+    }
 
     // Apply alignment
     cell_div = match alignment {
