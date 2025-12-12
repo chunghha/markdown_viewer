@@ -43,7 +43,12 @@ A desktop Markdown viewer built with Rust and GPUI, featuring advanced scrolling
 - **v0.13.1: Recent Files History**
   - **Open Recent**: Track and quickly reopen recently accessed files with `Cmd+Shift+O`
   - **Smart Tracking**: Automatically remembers files you open
+  - **Open Recent**: Track and quickly reopen recently accessed files with `Cmd+Shift+O`
+  - **Smart Tracking**: Automatically remembers files you open
   - **Persistence**: recent files list kept between sessions
+- **v0.13.2: Config Auto-Reload**
+  - **Hot Swapping**: Edit `config.ron` and see changes instantly
+  - **Instant Feedback**: Great for tweaking themes and layout settings
 
 ### Keyboard Shortcuts
 - **Search**: `Cmd+F` (macOS) or `Ctrl+F` to toggle search

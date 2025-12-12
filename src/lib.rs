@@ -19,7 +19,7 @@ pub use internal::scroll::ScrollState;
 pub use internal::search::SearchState;
 pub use internal::style::*;
 pub use internal::ui;
-pub use internal::viewer::{ImageState, MarkdownViewer};
+pub use internal::viewer::{ImageState, MarkdownViewer, WatcherState};
 
 // Re-export internal helpers that are useful to binary targets (controlled exposure)
 pub use internal::image::{rasterize_svg_to_dynamic_image, rgba_to_bgra};

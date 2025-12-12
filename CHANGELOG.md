@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.13.2] - 2025-12-12
+
+### Added
+- **Config Auto-Reload**: Hot-reload configuration changes
+  - Modify `config.ron` to instantly update theme, fonts, and settings
+  - No application restart required for most settings
+  - Debounced updates to prevent reloading on partial edits
+
 ## [0.13.1] - 2025-12-12
 
 ### Added

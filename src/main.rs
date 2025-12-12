@@ -2,8 +2,8 @@ use anyhow::{Context, Result};
 use clap::Parser;
 use gpui::{App, AppContext, Application, WindowOptions};
 use markdown_viewer::{
-    MarkdownViewer, config::AppConfig, load_markdown_content, resolve_markdown_file_path,
-    start_watching,
+    MarkdownViewer, WatcherState, config::AppConfig, load_markdown_content,
+    resolve_markdown_file_path, start_watching,
 };
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -98,6 +98,29 @@ fn main() -> Result<()> {
         }
     };
 
+    // Start config watcher if config.ron exists
+    let config_path = std::path::PathBuf::from("config.ron");
+    let (config_watcher_rx, config_watcher) = match config_path.exists() {
+        true => {
+            let abs_config_path =
+                std::fs::canonicalize(&config_path).unwrap_or_else(|_| config_path.clone());
+            match start_watching(&abs_config_path, 100) {
+                Ok((rx, debouncer)) => {
+                    info!("Config watcher started for: {:?}", abs_config_path);
+                    (Some(rx), Some(debouncer))
+                }
+                Err(e) => {
+                    warn!(
+                        "Failed to start config watcher: {:?}. Auto-reload disabled.",
+                        e
+                    );
+                    (None, None)
+                }
+            }
+        }
+        false => (None, None),
+    };
+
     // Run the GUI on the main thread (required by gpui). Background async work will use `bg_rt`.
     Application::new().run(move |app: &mut App| {
         let window_config = config.clone();
@@ -108,14 +131,20 @@ fn main() -> Result<()> {
                 // We can't focus here because we don't have &mut Window
                 cx.new(|cx| {
                     let focus_handle = cx.focus_handle();
+                    let watcher_state = WatcherState {
+                        file_watcher_rx,
+                        file_watcher,
+                        config_watcher_rx,
+                        config_watcher,
+                    };
+
                     let viewer = MarkdownViewer::new(
                         markdown_input.clone(),
                         file_path_buf,
                         window_config,
                         bg_rt.clone(),
                         focus_handle,
-                        file_watcher_rx,
-                        file_watcher,
+                        watcher_state,
                     );
                     debug!("MarkdownViewer initialized");
                     viewer

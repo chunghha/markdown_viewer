@@ -150,12 +150,28 @@ pub struct MarkdownViewer {
     pub matcher: SkimMatcherV2,
     /// v0.13.1: Current mode of the file finder
     pub finder_mode: FinderMode,
+    /// v0.13.2: Config watcher event receiver
+    pub config_watcher_rx: Option<Receiver<FileWatcherEvent>>,
+    /// v0.13.2: Config watcher debouncer (must be kept alive)
+    #[allow(dead_code)]
+    pub config_watcher:
+        Option<Debouncer<notify::RecommendedWatcher, notify_debouncer_full::FileIdMap>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Copy)]
 pub enum FinderMode {
     AllFiles,
     RecentFiles,
+}
+
+/// Container for file and config watcher state to reduce constructor arguments
+pub struct WatcherState {
+    pub file_watcher_rx: Option<Receiver<FileWatcherEvent>>,
+    pub file_watcher:
+        Option<Debouncer<notify::RecommendedWatcher, notify_debouncer_full::FileIdMap>>,
+    pub config_watcher_rx: Option<Receiver<FileWatcherEvent>>,
+    pub config_watcher:
+        Option<Debouncer<notify::RecommendedWatcher, notify_debouncer_full::FileIdMap>>,
 }
 
 impl MarkdownViewer {
@@ -165,10 +181,7 @@ impl MarkdownViewer {
         config: AppConfig,
         bg_rt: Arc<Runtime>,
         focus_handle: FocusHandle,
-        file_watcher_rx: Option<Receiver<FileWatcherEvent>>,
-        file_watcher: Option<
-            Debouncer<notify::RecommendedWatcher, notify_debouncer_full::FileIdMap>,
-        >,
+        watcher_state: WatcherState,
     ) -> Self {
         let viewport_height = config.window.height;
         let viewport_width = config.window.width;
@@ -194,8 +207,8 @@ impl MarkdownViewer {
             search_input: String::new(),
             focus_handle,
             show_help: false,
-            file_watcher_rx,
-            file_watcher,
+            file_watcher_rx: watcher_state.file_watcher_rx,
+            file_watcher: watcher_state.file_watcher,
             file_deleted: false,
             show_toc: false,
             toc,
@@ -225,6 +238,8 @@ impl MarkdownViewer {
             finder_selected_index: 0,
             matcher: SkimMatcherV2::default(),
             finder_mode: FinderMode::AllFiles,
+            config_watcher_rx: watcher_state.config_watcher_rx,
+            config_watcher: watcher_state.config_watcher,
         };
 
         viewer.recompute_max_scroll();
@@ -979,6 +994,28 @@ impl MarkdownViewer {
         .detach();
     }
 
+    /// Reload configuration from file and update state
+    pub fn reload_config(&mut self, cx: &mut Context<Self>) {
+        info!("Reloading configuration...");
+        match AppConfig::load() {
+            Ok(new_config) => {
+                self.config = new_config;
+                // Update window title if changed (requires window handle, can't easily do here without it)
+                // But we can update internal state dependent on config
+
+                // Recompute scroll bounds (font sizes might have changed)
+                self.recompute_max_scroll();
+                self.compute_toc_max_scroll();
+
+                info!("Configuration reloaded successfully");
+                cx.notify();
+            }
+            Err(e) => {
+                warn!("Failed to reload configuration: {}", e);
+            }
+        }
+    }
+
     /// Collect all links from a markdown AST node and add them to focusable_elements
     fn collect_links_from_ast<'a>(&mut self, node: &'a comrak::nodes::AstNode<'a>) {
         use comrak::nodes::NodeValue;
@@ -1007,6 +1044,28 @@ impl Render for MarkdownViewer {
         if let Some(rx) = &self.file_watcher_rx {
             while let Ok(event) = rx.try_recv() {
                 events.push(event);
+            }
+        }
+
+        // Poll config watcher
+        let mut config_events = Vec::new();
+        if let Some(rx) = &self.config_watcher_rx {
+            while let Ok(event) = rx.try_recv() {
+                config_events.push(event);
+            }
+        }
+
+        for event in config_events {
+            match event {
+                FileWatcherEvent::Modified => {
+                    self.reload_config(cx);
+                }
+                FileWatcherEvent::Deleted => {
+                    warn!("Config file deleted!");
+                }
+                FileWatcherEvent::Error(e) => {
+                    warn!("Config watcher error: {}", e);
+                }
             }
         }
 

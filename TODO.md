@@ -59,9 +59,9 @@ The core infrastructure has been **fully implemented and tested**. The applicati
   - [x] Open Recent menu/screen
 
 ### v0.13.2: Developer Experience
-- [ ] **Config Auto-Reload**
-  - Watch `config.ron` for changes
-  - Hot-reload theme and settings
+- [x] **Config Auto-Reload**
+  - [x] Watch `config.ron` for changes
+  - [x] Hot-reload theme and settings
 
 ## Next Development Phases 🚀
 
